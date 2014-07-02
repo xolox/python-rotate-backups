@@ -52,6 +52,7 @@ setup(name='rotate-backups',
       install_requires=[
           'coloredlogs >= 0.5',
           'executor >= 1.3',
+          'humanfriendly >= 1.9.4',
           'naturalsort >= 1.2.1',
           'python-dateutil >= 2.2',
       ],

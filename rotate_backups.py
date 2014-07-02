@@ -21,7 +21,7 @@ Supported options:
 """
 
 # Semi-standard module versioning.
-__version__ = '0.1'
+__version__ = '0.1.1'
 
 # Standard library modules.
 import collections
