@@ -72,15 +72,11 @@ what you expect.
 Getting started
 ---------------
 
-To install:
-
-.. code-block::
+To install::
 
    $ pip install rotate-backups
 
-To run:
-
-.. code-block::
+To run::
 
    $ rotate-backups --help
    Usage: rotate-backups [OPTIONS] DIRECTORY..
@@ -117,7 +113,10 @@ This software is licensed under the `MIT license`_.
 Real example
 ------------
 
-.. code-block::
+Here's a real world example, more or less. I took a directory of daily backups
+that had accumulated over a couple of months and cloned the directory structure
+for testing. The real output is wider because it includes a timestamp and other
+information, but you get the idea::
 
    $ rotate-backups --hourly=24 --daily=7 --weekly=4 --monthly=12 --yearly=always sample-backups/
    INFO Scanning directory for timestamped backups: sample-backups/
