@@ -3,7 +3,7 @@
 # Setup script for the `rotate-backups' package.
 #
 # Author: Peter Odding <peter@peterodding.com>
-# Last Change: July 3, 2014
+# Last Change: November 1, 2014
 # URL: https://github.com/xolox/python-rotate-backups
 
 """
@@ -31,9 +31,9 @@ for line in open(module):
         version_string = match.group(1)
         break
 else:
-    raise Exception("Failed to extract version from rotate_backups.py!")
+    raise Exception("Failed to extract version from %s!" % module)
 
-# Fill in the long description (for the benefit of PyPi)
+# Fill in the long description (for the benefit of PyPI)
 # with the contents of README.rst (rendered by GitHub).
 readme_file = join(source_directory, 'README.rst')
 readme_text = open(readme_file, 'r').read()

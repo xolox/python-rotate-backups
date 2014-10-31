@@ -65,9 +65,9 @@ Note the version number 0.1. That's not to say that ``rotate-backups`` doesn't
 already do exactly what I want it to, I just don't fully trust it yet so won't
 give it a 1.0 version.
 
-Also, I haven't written automated tests to very correctness yet, so until then
-please feel free to use the dry run mode to verify that what will happen is
-what you expect.
+Also, I haven't written automated tests to verify correctness yet, so until
+then please feel free to use the dry run mode to verify that what will happen
+is what you expect.
 
 Getting started
 ---------------
