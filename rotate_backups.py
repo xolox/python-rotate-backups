@@ -15,6 +15,8 @@ Supported options:
  -m, --monthly=NUM   how many monthly backups to preserve
  -y, --yearly=NUM    how many yearly backups to preserve
  -i, --ionice=CLASS  use ionice to set the I/O scheduling class
+ -x, --exclude=STR   exclude from rotation
+ -c, --include=STR   include only from rotation
  -n, --dry-run       don't make any changes, just print what would be done
  -v, --verbose       make more noise
  -h, --help          show this message and exit
@@ -79,10 +81,12 @@ def main():
         logger.addHandler(handler)
     # Parse the command line arguments.
     try:
-        options, arguments = getopt.getopt(sys.argv[1:], 'H:d:w:m:y:i:nvh', [
+        options, arguments = getopt.getopt(sys.argv[1:], 'H:d:w:m:y:i:x:c:nvh', [
             'hourly=', 'daily=', 'weekly=', 'monthly=', 'yearly=', 'ionice=',
-            'dry-run', 'verbose', 'help'
+            'include=', 'exclude=', 'dry-run', 'verbose', 'help',
         ])
+        exclude = []
+        include = []
         for option, value in options:
             if option in ('-H', '--hourly'):
                 rotation_scheme['hourly'] = cast_to_retention_period(value)
@@ -101,6 +105,10 @@ def main():
                     msg = "Invalid I/O scheduling class! (got %r while valid options are %s)"
                     raise Exception(msg % (value, humanfriendly.concatenate(expected)))
                 io_scheduling_class = value
+            elif option in ('-x', '--exclude'):
+                exclude.append(value)
+            elif option in ('-c', '--include'):
+                include.append(value)
             elif option in ('-n', '--dry-run'):
                 logger.info("Performing a dry run (because of %s option) ..", option)
                 dry_run = True
@@ -126,7 +134,7 @@ def main():
     # Rotate the backups in the given directories.
     for pathname in arguments:
         rotate_backups(pathname, rotation_scheme, dry_run=dry_run,
-                       io_scheduling_class=io_scheduling_class)
+                       io_scheduling_class=io_scheduling_class, exclude=exclude, include=include)
 
 
 def cast_to_retention_period(value):
@@ -140,7 +148,7 @@ def cast_to_retention_period(value):
         raise Exception("Invalid number %s!" % value)
 
 
-def rotate_backups(directory, rotation_scheme, dry_run=False, io_scheduling_class=None):
+def rotate_backups(directory, rotation_scheme, dry_run=False, io_scheduling_class=None, exclude=[], include=[]):
     """
     Rotate the backups in a directory according to a flexible rotation scheme.
 
@@ -154,18 +162,33 @@ def rotate_backups(directory, rotation_scheme, dry_run=False, io_scheduling_clas
     :param io_scheduling_class: Use ``ionice`` to set the I/O scheduling class
                                 (expected to be one of the strings 'idle',
                                 'best-effort' or 'realtime').
+    :param exclude: exclude list
+    :param include: include only list
     """
     # Find the backups and their dates.
     backups = set()
     directory = os.path.abspath(directory)
     logger.info("Scanning directory for timestamped backups: %s", directory)
     for entry in natsort.natsort(os.listdir(directory)):
+        if len(exclude) > 0:
+            ignore = False
+        if len(include) > 0:
+            ignore = True
+        for exc in exclude:
+            if exc in entry:
+                ignore = True
+        for inc in include:
+            if inc in entry:
+                ignore = False
         match = timestamp_pattern.search(entry)
-        if match:
+        if not ignore and match:
             backups.add(Backup(pathname=os.path.join(directory, entry),
                                datetime=datetime.datetime(*(int(group, 10) for group in match.groups('0')))))
         else:
-            logger.debug("Failed to match time stamp in filename: %s", entry)
+            if ignore:
+                logger.debug("Filename is excluded: %s", entry)
+            else:
+                logger.debug("Failed to match time stamp in filename: %s", entry)
     if not backups:
         logger.info("No backups found in %s.", directory)
         return
