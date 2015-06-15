@@ -172,8 +172,10 @@ def rotate_backups(directory, rotation_scheme, dry_run=False, io_scheduling_clas
     for entry in natsort.natsort(os.listdir(directory)):
         if len(exclude) > 0:
             ignore = False
-        if len(include) > 0:
+        elif len(include) > 0:
             ignore = True
+        else:
+            ignore = False
         for exc in exclude:
             if exc in entry:
                 ignore = True
