@@ -1,7 +1,7 @@
 # rotate-backups: Simple command line interface for backup rotation.
 #
 # Author: Peter Odding <peter@peterodding.com>
-# Last Change: July 3, 2014
+# Last Change: July 15, 2015
 # URL: https://github.com/xolox/python-rotate-backups
 
 """
@@ -21,7 +21,7 @@ Supported options:
 """
 
 # Semi-standard module versioning.
-__version__ = '0.1.1'
+__version__ = '0.1.2'
 
 # Standard library modules.
 import collections
@@ -92,7 +92,7 @@ def main():
                 rotation_scheme['weekly'] = cast_to_retention_period(value)
             elif option in ('-m', '--monthly'):
                 rotation_scheme['monthly'] = cast_to_retention_period(value)
-            elif option in ('-d', '--yearly'):
+            elif option in ('-y', '--yearly'):
                 rotation_scheme['yearly'] = cast_to_retention_period(value)
             elif option in ('-i', '--ionice'):
                 value = value.lower().strip()
