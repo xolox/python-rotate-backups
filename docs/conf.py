@@ -58,6 +58,7 @@ pygments_style = 'sphinx'
 # From: http://twistedmatrix.com/trac/ticket/4582.
 intersphinx_mapping = {
     'python': ('http://docs.python.org', None),
+    'dateutil': ('https://dateutil.readthedocs.org/en/latest/', None),
 }
 
 # -- Options for HTML output ---------------------------------------------------

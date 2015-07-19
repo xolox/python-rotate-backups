@@ -160,9 +160,6 @@ frequencies can be combined.
 To-do list
 ----------
 
-- Improve the Python code to make it easier to integrate into other projects as
-  a Python API.
-
 - Support for configuration files that define one or more directories with
   their own rotation schemes. Ideally backup directories and rotation schemes
   can be specified separately and associated to each other.
