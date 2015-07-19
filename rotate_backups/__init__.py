@@ -281,6 +281,3 @@ class Backup(object):
     def __lt__(self, other):
         """Enable proper sorting of backups."""
         return self.datetime < other.datetime
-
-if __name__ == '__main__':
-    main()

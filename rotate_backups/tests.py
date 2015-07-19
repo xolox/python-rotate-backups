@@ -89,6 +89,8 @@ class RotateBackupsTestCase(unittest.TestCase):
         """Test argument validation of the ``ionice`` scheduling class."""
         # Test that an invalid ionice scheduling class causes an error to be reported.
         assert run_cli('--ionice=unsupported-class') != 0
+        # Test that an invalid rotation scheme causes an error to be reported.
+        assert run_cli('--hourly=not-a-number') != 0
         # Test that non-existing directories cause an error to be reported.
         with TemporaryDirectory(prefix='rotate-backups-', suffix='-test-suite') as root:
             assert run_cli(os.path.join(root, 'does-not-exist')) != 0
