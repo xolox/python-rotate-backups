@@ -16,15 +16,19 @@ Setup script for the ``rotate-backups`` package.
   Build a source distribution archive.
 """
 
+# Standard library modules.
+import codecs
+import os
 import re
-from os.path import abspath, dirname, join
+
+# De-facto standard solution for Python packaging.
 from setuptools import setup, find_packages
 
 # Find the directory where the source distribution was unpacked.
-source_directory = dirname(abspath(__file__))
+source_directory = os.path.dirname(os.path.abspath(__file__))
 
 # Find the current version.
-module = join(source_directory, 'rotate_backups', '__init__.py')
+module = os.path.join(source_directory, 'rotate_backups', '__init__.py')
 for line in open(module):
     match = re.match(r'^__version__\s*=\s*["\']([^"\']+)["\']$', line)
     if match:
@@ -35,8 +39,9 @@ else:
 
 # Fill in the long description (for the benefit of PyPI)
 # with the contents of README.rst (rendered by GitHub).
-readme_file = join(source_directory, 'README.rst')
-readme_text = open(readme_file, 'r').read()
+readme_file = os.path.join(source_directory, 'README.rst')
+with codecs.open(readme_file, 'r', 'utf-8') as handle:
+    readme_text = handle.read()
 
 setup(name='rotate-backups',
       version=version_string,
@@ -58,8 +63,9 @@ setup(name='rotate-backups',
       ],
       test_suite='rotate_backups.tests',
       classifiers=[
-          'Development Status :: 4 - Beta',
+          'Development Status :: 5 - Production/Stable',
           'Environment :: Console',
+          'Intended Audience :: Developers',
           'Intended Audience :: System Administrators',
           'License :: OSI Approved :: MIT License',
           'Operating System :: POSIX',

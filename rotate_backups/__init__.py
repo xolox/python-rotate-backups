@@ -5,7 +5,7 @@
 # URL: https://github.com/xolox/python-rotate-backups
 
 # Semi-standard module versioning.
-__version__ = '0.1.2'
+__version__ = '1.0'
 
 # Standard library modules.
 import collections
@@ -16,10 +16,10 @@ import os
 import re
 
 # External dependencies.
-import executor
-import humanfriendly
-import natsort
 from dateutil.relativedelta import relativedelta
+from executor import execute
+from humanfriendly import concatenate, Timer
+from natsort import natsort
 
 # Initialize a logger.
 logger = logging.getLogger(__name__)
@@ -79,7 +79,7 @@ def rotate_backups(directory, rotation_scheme, dry_run=False, io_scheduling_clas
     backups = set()
     directory = os.path.abspath(directory)
     logger.info("Scanning directory for timestamped backups: %s", directory)
-    for entry in natsort.natsort(os.listdir(directory)):
+    for entry in natsort(os.listdir(directory)):
         match = timestamp_pattern.search(entry)
         if match:
             backups.add(Backup(pathname=os.path.join(directory, entry),
@@ -131,7 +131,7 @@ def rotate_backups(directory, rotation_scheme, dry_run=False, io_scheduling_clas
         if backup in backups_to_preserve:
             matching_periods = backups_to_preserve[backup]
             logger.info("Preserving %s (matches %s retention %s) ..", backup.pathname,
-                        humanfriendly.concatenate(map(repr, matching_periods)),
+                        concatenate(map(repr, matching_periods)),
                         "period" if len(matching_periods) == 1 else "periods")
         else:
             logger.info("Deleting %s %s ..", backup.type, backup.pathname)
@@ -139,8 +139,8 @@ def rotate_backups(directory, rotation_scheme, dry_run=False, io_scheduling_clas
                 command = ['rm', '-Rf', backup.pathname]
                 if io_scheduling_class:
                     command = ['ionice', '--class', io_scheduling_class] + command
-                timer = humanfriendly.Timer()
-                executor.execute(*command, logger=logger)
+                timer = Timer()
+                execute(*command, logger=logger)
                 logger.debug("Deleted %s in %s.", backup.pathname, timer)
     if len(backups_to_preserve) == len(backups):
         logger.info("Nothing to do!")
