@@ -13,6 +13,10 @@ this program you specify a rotation scheme via (a combination of) the --hourly,
 (or multiple directories) containing backups to rotate as one or more
 positional arguments.
 
+Instead of specifying directories and a rotation scheme on the command line you
+can also add them to a configuration file. For more details refer to the online
+documentation (see also the --config option).
+
 Please use the --dry-run option to test the effect of the specified rotation
 scheme before letting this program loose on your precious backups! If you don't
 test the results using the dry run mode and this program eats more backups than
@@ -69,6 +73,13 @@ Supported options:
     the values `idle', `best-effort' or `realtime'. Refer to the man page of
     the `ionice' program for details about these values.
 
+  -c, --config=PATH
+
+    Load configuration from the pathname given by PATH. If this option isn't
+    given two default locations are checked: `~/.rotate-backups.ini' and
+    `/etc/rotate-backups.ini'. The first of these two configuration files to
+    exist is loaded. For more details refer to the online documentation.
+
   -n, --dry-run
 
     Don't make any changes, just print what would be done. This makes it easy
@@ -92,11 +103,11 @@ import sys
 
 # External dependencies.
 import coloredlogs
-from humanfriendly import concatenate
+from humanfriendly import concatenate, parse_path
 from humanfriendly.terminal import usage
 
 # Modules included in our package.
-from rotate_backups import rotate_backups
+from rotate_backups import coerce_retention_period, load_config_file, RotateBackups
 
 # Initialize a logger.
 logger = logging.getLogger(__name__)
@@ -110,6 +121,7 @@ def main():
         handler.setFormatter(logging.Formatter('%(module)s[%(process)d] %(levelname)s %(message)s'))
         logger.addHandler(handler)
     # Command line option defaults.
+    config_file = None
     dry_run = False
     exclude_list = []
     include_list = []
@@ -117,21 +129,21 @@ def main():
     rotation_scheme = {}
     # Parse the command line arguments.
     try:
-        options, arguments = getopt.getopt(sys.argv[1:], 'H:d:w:m:y:I:x:i:nvh', [
+        options, arguments = getopt.getopt(sys.argv[1:], 'H:d:w:m:y:I:x:i:c:nvh', [
             'hourly=', 'daily=', 'weekly=', 'monthly=', 'yearly=', 'include=',
-            'exclude=', 'ionice=', 'dry-run', 'verbose', 'help',
+            'exclude=', 'ionice=', 'config=', 'dry-run', 'verbose', 'help',
         ])
         for option, value in options:
             if option in ('-H', '--hourly'):
-                rotation_scheme['hourly'] = cast_to_retention_period(value)
+                rotation_scheme['hourly'] = coerce_retention_period(value)
             elif option in ('-d', '--daily'):
-                rotation_scheme['daily'] = cast_to_retention_period(value)
+                rotation_scheme['daily'] = coerce_retention_period(value)
             elif option in ('-w', '--weekly'):
-                rotation_scheme['weekly'] = cast_to_retention_period(value)
+                rotation_scheme['weekly'] = coerce_retention_period(value)
             elif option in ('-m', '--monthly'):
-                rotation_scheme['monthly'] = cast_to_retention_period(value)
+                rotation_scheme['monthly'] = coerce_retention_period(value)
             elif option in ('-y', '--yearly'):
-                rotation_scheme['yearly'] = cast_to_retention_period(value)
+                rotation_scheme['yearly'] = coerce_retention_period(value)
             elif option in ('-I', '--include'):
                 include_list.append(value)
             elif option in ('-x', '--exclude'):
@@ -143,6 +155,8 @@ def main():
                     msg = "Invalid I/O scheduling class! (got %r while valid options are %s)"
                     raise Exception(msg % (value, concatenate(expected)))
                 io_scheduling_class = value
+            elif option in ('-c', '--config'):
+                config_file = parse_path(value)
             elif option in ('-n', '--dry-run'):
                 logger.info("Performing a dry run (because of %s option) ..", option)
                 dry_run = True
@@ -153,35 +167,31 @@ def main():
                 return
             else:
                 assert False, "Unhandled option! (programming error)"
-        logger.debug("Parsed rotation scheme: %s", rotation_scheme)
-        if not arguments:
-            usage(__doc__)
-            return
+        if rotation_scheme:
+            logger.debug("Parsed rotation scheme: %s", rotation_scheme)
+        # Make sure all of the directories given as arguments exist.
         for pathname in arguments:
             if not os.path.isdir(pathname):
                 msg = "Directory doesn't exist! (%s)"
                 raise Exception(msg % pathname)
+        # If no arguments are given but the system has a configuration file
+        # then the backups in the configured directories are rotated.
+        if not arguments:
+            arguments.extend(directory for directory, _, _ in load_config_file(config_file))
+        # Show the usage message when no directories are given nor configured.
+        if not arguments:
+            usage(__doc__)
+            return
     except Exception as e:
         logger.error("%s", e)
         sys.exit(1)
-    # Rotate the backups in the given directories.
+    # Rotate the backups in the given or configured directories.
     for pathname in arguments:
-        rotate_backups(
-            directory=pathname,
+        RotateBackups(
             rotation_scheme=rotation_scheme,
             include_list=include_list,
             exclude_list=exclude_list,
             io_scheduling_class=io_scheduling_class,
             dry_run=dry_run,
-        )
-
-
-def cast_to_retention_period(value):
-    """Cast a command line argument to a retention period (the string 'always' or an integer)."""
-    value = value.strip()
-    if value.lower() == 'always':
-        return 'always'
-    elif value.isdigit():
-        return int(value)
-    else:
-        raise Exception("Invalid number %s!" % value)
+            config_file=config_file,
+        ).rotate_backups(pathname)

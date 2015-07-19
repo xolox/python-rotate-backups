@@ -5,6 +5,7 @@
 # URL: https://github.com/xolox/python-rotate-backups
 
 # Standard library modules.
+import ConfigParser
 import logging
 import os
 import shutil
@@ -16,7 +17,7 @@ import unittest
 import coloredlogs
 
 # The module we're testing.
-from rotate_backups import RotateBackups
+from rotate_backups import load_config_file, RotateBackups
 from rotate_backups.cli import main
 
 # Initialize a logger for this module.
@@ -88,15 +89,20 @@ class RotateBackupsTestCase(unittest.TestCase):
 
     def test_argument_validation(self):
         """Test argument validation."""
-        # Test that an empty rotation scheme raises an exception.
-        self.assertRaises(ValueError, RotateBackups, rotation_scheme={})
         # Test that an invalid ionice scheduling class causes an error to be reported.
         assert run_cli('--ionice=unsupported-class') != 0
         # Test that an invalid rotation scheme causes an error to be reported.
         assert run_cli('--hourly=not-a-number') != 0
-        # Test that non-existing directories cause an error to be reported.
+        # Argument validation tests that require an empty directory.
         with TemporaryDirectory(prefix='rotate-backups-', suffix='-test-suite') as root:
+            # Test that non-existing directories cause an error to be reported.
             assert run_cli(os.path.join(root, 'does-not-exist')) != 0
+            # Test that loading of a custom configuration file raises an
+            # exception when the configuration file cannot be loaded.
+            self.assertRaises(ValueError, lambda: list(load_config_file(os.path.join(root, 'rotate-backups.ini'))))
+            # Test that an empty rotation scheme raises an exception.
+            self.create_sample_backup_set(root)
+            self.assertRaises(ValueError, lambda: RotateBackups(rotation_scheme={}).rotate_backups(root))
 
     def test_dry_run(self):
         """Make sure dry run doesn't remove any backups."""
@@ -124,28 +130,35 @@ class RotateBackupsTestCase(unittest.TestCase):
             '2014-03-01@20:04',  # monthly (6)
             '2014-04-01@20:03',  # monthly (7)
             '2014-05-01@20:06',  # monthly (8)
-            '2014-05-19@20:02',  # weekly (1)
-            '2014-05-26@20:05',  # weekly (2)
             '2014-06-01@20:01',  # monthly (9)
-            '2014-06-02@20:05',  # weekly (3)
-            '2014-06-09@20:01',  # weekly (4)
-            '2014-06-16@20:02',  # weekly (5)
-            '2014-06-23@20:04',  # weekly (6)
+            '2014-06-09@20:01',  # weekly (1)
+            '2014-06-16@20:02',  # weekly (2)
+            '2014-06-23@20:04',  # weekly (3)
             '2014-06-26@20:04',  # daily (1)
             '2014-06-27@20:02',  # daily (2)
             '2014-06-28@20:02',  # daily (3)
             '2014-06-29@20:01',  # daily (4)
-            '2014-06-30@20:03',  # daily (5), weekly (7)
+            '2014-06-30@20:03',  # daily (5), weekly (4)
             '2014-07-01@20:02',  # daily (6), monthly (10)
             '2014-07-02@20:03',  # hourly (1), daily (7)
             'some-random-directory',  # no recognizable time stamp, should definitely be preserved
+            'rotate-backups.ini',  # no recognizable time stamp, should definitely be preserved
         ])
         with TemporaryDirectory(prefix='rotate-backups-', suffix='-test-suite') as root:
+            # Specify the rotation scheme and options through a configuration file.
+            config_file = os.path.join(root, 'rotate-backups.ini')
+            parser = ConfigParser.RawConfigParser()
+            parser.add_section(root)
+            parser.set(root, 'hourly', '24')
+            parser.set(root, 'daily', '7')
+            parser.set(root, 'weekly', '4')
+            parser.set(root, 'monthly', '12')
+            parser.set(root, 'yearly', 'always')
+            parser.set(root, 'ionice', 'idle')
+            with open(config_file, 'w') as handle:
+                parser.write(handle)
             self.create_sample_backup_set(root)
-            run_cli(
-                '--verbose', '--ionice=idle', '--hourly=24', '--daily=7',
-                '--weekly=7', '--monthly=12', '--yearly=always', root,
-            )
+            run_cli('--verbose', '--config=%s' % config_file)
             backups_that_were_preserved = set(os.listdir(root))
             assert backups_that_were_preserved == expected_to_be_preserved
 
@@ -160,10 +173,7 @@ class RotateBackupsTestCase(unittest.TestCase):
             '2014-03-01@20:04',  # monthly
             '2014-04-01@20:03',  # monthly
             '2014-05-01@20:06',  # monthly
-            '2014-05-19@20:02',  # weekly
-            '2014-05-26@20:05',  # weekly
             '2014-06-01@20:01',  # monthly
-            '2014-06-02@20:05',  # weekly
             '2014-06-09@20:01',  # weekly
             '2014-06-16@20:02',  # weekly
             '2014-06-23@20:04',  # weekly
@@ -183,7 +193,7 @@ class RotateBackupsTestCase(unittest.TestCase):
             self.create_sample_backup_set(root)
             run_cli(
                 '--verbose', '--ionice=idle', '--hourly=24', '--daily=7',
-                '--weekly=7', '--monthly=12', '--yearly=always',
+                '--weekly=4', '--monthly=12', '--yearly=always',
                 '--include=2014-*', root,
             )
             backups_that_were_preserved = set(os.listdir(root))
@@ -207,15 +217,14 @@ class RotateBackupsTestCase(unittest.TestCase):
             '2014-05-19@20:02',  # weekly (1)
             '2014-05-26@20:05',  # weekly (2)
             '2014-06-01@20:01',  # monthly (9)
-            '2014-06-02@20:05',  # weekly (3)
-            '2014-06-09@20:01',  # weekly (4)
-            '2014-06-16@20:02',  # weekly (5)
-            '2014-06-23@20:04',  # weekly (6)
+            '2014-06-09@20:01',  # weekly (3)
+            '2014-06-16@20:02',  # weekly (4)
+            '2014-06-23@20:04',  # weekly (5)
             '2014-06-26@20:04',  # daily (1)
             '2014-06-27@20:02',  # daily (2)
             '2014-06-28@20:02',  # daily (3)
             '2014-06-29@20:01',  # daily (4)
-            '2014-06-30@20:03',  # daily (5), weekly (7)
+            '2014-06-30@20:03',  # daily (5), weekly (6)
             '2014-07-01@20:02',  # daily (6), monthly (10)
             '2014-07-02@20:03',  # hourly (1), daily (7)
             'some-random-directory',  # no recognizable time stamp, should definitely be preserved
@@ -227,7 +236,7 @@ class RotateBackupsTestCase(unittest.TestCase):
             self.create_sample_backup_set(root)
             run_cli(
                 '--verbose', '--ionice=idle', '--hourly=24', '--daily=7',
-                '--weekly=7', '--monthly=12', '--yearly=always',
+                '--weekly=4', '--monthly=12', '--yearly=always',
                 '--exclude=2014-05-*', root,
             )
             backups_that_were_preserved = set(os.listdir(root))

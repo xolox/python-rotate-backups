@@ -11,10 +11,11 @@ The :mod:`rotate_backups` module contains the Python API of the
 """
 
 # Semi-standard module versioning.
-__version__ = '2.1'
+__version__ = '2.2'
 
 # Standard library modules.
 import collections
+import ConfigParser
 import datetime
 import fnmatch
 import functools
@@ -25,11 +26,18 @@ import re
 # External dependencies.
 from dateutil.relativedelta import relativedelta
 from executor import execute
-from humanfriendly import concatenate, format_path, Timer
+from humanfriendly import format_path, parse_path, Timer
+from humanfriendly.text import concatenate, split
 from natsort import natsort
 
 # Initialize a logger for this module.
 logger = logging.getLogger(__name__)
+
+GLOBAL_CONFIG_FILE = '/etc/rotate-backups.ini'
+"""The pathname of the system wide configuration file (a string)."""
+
+LOCAL_CONFIG_FILE = '~/.rotate-backups.ini'
+"""The pathname of the user specific configuration file (a string)."""
 
 ORDERED_FREQUENCIES = (('hourly', relativedelta(hours=1)),
                        ('daily', relativedelta(days=1)),
@@ -70,6 +78,54 @@ filenames.
 """
 
 
+def coerce_retention_period(value):
+    """
+    Coerce a retention period to a Python value.
+
+    :param value: A string containing an integer number or the text 'always'.
+    :returns: An integer number or the string 'always'.
+    :raises: :exc:`~exceptions.ValueError` when the string can't be coerced.
+    """
+    value = value.strip()
+    if value.lower() == 'always':
+        return 'always'
+    elif value.isdigit():
+        return int(value)
+    else:
+        raise ValueError("Invalid retention period! (%s)" % value)
+
+
+def load_config_file(configuration_file=None):
+    """
+    used by :class:`RotateBackups` to discover rotation schemes and by
+    :func:`rotate_all_backups()` to discover directories with backups.
+    """
+    parser = ConfigParser.RawConfigParser()
+    if configuration_file:
+        logger.debug("Using custom configuration file: %s", format_path(configuration_file))
+        loaded_files = parser.read(configuration_file)
+        if len(loaded_files) == 0:
+            msg = "Failed to read configuration file! (%s)"
+            raise ValueError(msg % configuration_file)
+    else:
+        for config_file in [LOCAL_CONFIG_FILE, GLOBAL_CONFIG_FILE]:
+            pathname = parse_path(config_file)
+            if parser.read(pathname):
+                logger.debug("Using configuration file %s ..", format_path(pathname))
+                break
+    for section in parser.sections():
+        directory = parse_path(section)
+        if os.path.isdir(directory):
+            options = dict(parser.items(section))
+            yield (directory,
+                   dict((name, coerce_retention_period(options[name]))
+                        for name in SUPPORTED_FREQUENCIES
+                        if name in options),
+                   dict(include_list=split(options.get('include-list', '')),
+                        exclude_list=split(options.get('exclude-list', '')),
+                        io_scheduling_class=options.get('ionice')))
+
+
 def rotate_backups(directory, rotation_scheme, include_list=None, exclude_list=None,
                    dry_run=False, io_scheduling_class=None):
     """
@@ -95,7 +151,8 @@ class RotateBackups(object):
 
     """Python API for the ``rotate-backups`` program."""
 
-    def __init__(self, rotation_scheme, include_list=None, exclude_list=None, dry_run=False, io_scheduling_class=None):
+    def __init__(self, rotation_scheme, include_list=None, exclude_list=None,
+                 dry_run=False, io_scheduling_class=None, config_file=None):
         """
         Construct a :class:`RotateBackups` object.
 
@@ -129,24 +186,26 @@ class RotateBackups(object):
         :param io_scheduling_class: Use ``ionice`` to set the I/O scheduling class
                                     (expected to be one of the strings 'idle',
                                     'best-effort' or 'realtime').
-        :raises: :exc:`~exceptions.ValueError` when the rotation scheme
-                 dictionary is empty (this would cause all backups to be
-                 deleted).
+        :param config_file: The pathname of a configuration file (a string).
         """
-        if not rotation_scheme:
-            raise ValueError("Refusing to use empty rotation scheme! (all backups would be deleted)")
         self.rotation_scheme = rotation_scheme
         self.include_list = include_list
         self.exclude_list = exclude_list
         self.dry_run = dry_run
         self.io_scheduling_class = io_scheduling_class
+        self.config_file = config_file
 
-    def rotate_backups(self, directory):
+    def rotate_backups(self, directory, load_config=True):
         """
         Rotate the backups in a directory according to a flexible rotation scheme.
 
         :param directory: The pathname of a directory that contains backups to
                           rotate (a string).
+        :param load_config: If :data:`True` (so by default) the rotation scheme
+                            and other options can be customized by the user in
+                            a configuration file. In this case the caller's
+                            arguments are only used when the configuration file
+                            doesn't define a configuration for the directory.
 
         .. note:: This function binds the main methods of the
                   :class:`RotateBackups` class together to implement backup
@@ -158,10 +217,13 @@ class RotateBackups(object):
                   :func:`apply_rotation_scheme()` and
                   :func:`find_preservation_criteria()` methods.
         """
+        # Load configuration overrides by user?
+        if load_config:
+            self.load_config_file(directory)
         # Collect the backups in the given directory.
         sorted_backups = self.collect_backups(directory)
         if not sorted_backups:
-            logger.info("No backups found in %s.", directory)
+            logger.info("No backups found in %s.", format_path(directory))
             return
         most_recent_backup = sorted_backups[-1]
         # Group the backups by the rotation frequencies.
@@ -175,19 +237,38 @@ class RotateBackups(object):
             if backup in backups_to_preserve:
                 matching_periods = backups_to_preserve[backup]
                 logger.info("Preserving %s (matches %s retention %s) ..",
-                            backup.pathname, concatenate(map(repr, matching_periods)),
+                            format_path(backup.pathname),
+                            concatenate(map(repr, matching_periods)),
                             "period" if len(matching_periods) == 1 else "periods")
             else:
-                logger.info("Deleting %s %s ..", backup.type, backup.pathname)
+                logger.info("Deleting %s %s ..", backup.type, format_path(backup.pathname))
                 if not self.dry_run:
                     command = ['rm', '-Rf', backup.pathname]
                     if self.io_scheduling_class:
                         command = ['ionice', '--class', self.io_scheduling_class] + command
                     timer = Timer()
                     execute(*command, logger=logger)
-                    logger.debug("Deleted %s in %s.", backup.pathname, timer)
+                    logger.debug("Deleted %s in %s.", format_path(backup.pathname), timer)
         if len(backups_to_preserve) == len(sorted_backups):
             logger.info("Nothing to do! (all backups preserved)")
+
+    def load_config_file(self, directory):
+        """
+        Load a rotation scheme and other options from a configuration file.
+
+        :param directory: The pathname of the directory to match (a string).
+        :param config_file: The pathname of a configuration file (a string or
+                            :data:`None`).
+        """
+        directory = os.path.realpath(directory)
+        for other_directory, rotation_scheme, options in load_config_file(self.config_file):
+            if directory == os.path.realpath(other_directory):
+                if rotation_scheme:
+                    self.rotation_scheme = rotation_scheme
+                for name, value in options.items():
+                    if value:
+                        setattr(self, name, value)
+                break
 
     def collect_backups(self, directory):
         """
@@ -199,7 +280,7 @@ class RotateBackups(object):
         """
         backups = []
         directory = os.path.abspath(directory)
-        logger.info("Scanning directory for timestamped backups: %s", format_path(directory))
+        logger.info("Scanning directory for backups: %s", format_path(directory))
         for entry in natsort(os.listdir(directory)):
             # Check for a time stamp in the directory entry's name.
             match = TIMESTAMP_PATTERN.search(entry)
@@ -216,7 +297,8 @@ class RotateBackups(object):
                     ))
             else:
                 logger.debug("Failed to match time stamp in filename: %s", entry)
-        logger.info("Found %i timestamped backups in %s.", len(backups), directory)
+        if backups:
+            logger.info("Found %i timestamped backups in %s.", len(backups), format_path(directory))
         return sorted(backups)
 
     def group_backups(self, backups):
@@ -248,11 +330,16 @@ class RotateBackups(object):
                                      :func:`group_backups()`.
         :param most_recent_backup: The :class:`~datetime.datetime` of the most
                                    recent backup.
+        :raises: :exc:`~exceptions.ValueError` when the rotation scheme
+                 dictionary is empty (this would cause all backups to be
+                 deleted).
 
         .. note:: This method mutates the given data structure by removing all
                   backups that should be removed to apply the user defined
                   rotation scheme.
         """
+        if not self.rotation_scheme:
+            raise ValueError("Refusing to use empty rotation scheme! (all backups would be deleted)")
         for frequency, backups in backups_by_frequency.items():
             # Ignore frequencies not specified by the user.
             if frequency not in self.rotation_scheme:
