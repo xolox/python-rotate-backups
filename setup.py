@@ -56,6 +56,7 @@ setup(name='rotate-backups',
           'naturalsort >= 1.2.1',
           'python-dateutil >= 2.2',
       ],
+      test_suite='rotate_backups.tests',
       classifiers=[
           'Development Status :: 4 - Beta',
           'Environment :: Console',

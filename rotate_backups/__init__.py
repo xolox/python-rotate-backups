@@ -1,7 +1,7 @@
 # rotate-backups: Simple command line interface for backup rotation.
 #
 # Author: Peter Odding <peter@peterodding.com>
-# Last Change: July 15, 2015
+# Last Change: July 19, 2015
 # URL: https://github.com/xolox/python-rotate-backups
 
 """
@@ -122,7 +122,7 @@ def main():
     except Exception as e:
         logger.error("%s", e)
         usage()
-        return
+        sys.exit(1)
     # Rotate the backups in the given directories.
     for pathname in arguments:
         rotate_backups(pathname, rotation_scheme, dry_run=dry_run,
@@ -182,6 +182,7 @@ def rotate_backups(directory, rotation_scheme, dry_run=False, io_scheduling_clas
         grouped_backups['monthly'][(backup.year, backup.month)].append(backup)
         grouped_backups['yearly'][backup.year].append(backup)
     # Apply the user defined rotation scheme.
+    # FIXME Guard against an empty rotation scheme?!
     for frequency, backups_by_frequency in grouped_backups.items():
         # Ignore frequencies not specified by the user.
         if frequency not in rotation_scheme:
@@ -227,7 +228,7 @@ def rotate_backups(directory, rotation_scheme, dry_run=False, io_scheduling_clas
 
 def usage():
     """Show a usage message on the terminal."""
-    print __doc__.strip()
+    print(__doc__.strip())
 
 
 @functools.total_ordering
@@ -283,5 +284,3 @@ class Backup(object):
 
 if __name__ == '__main__':
     main()
-
-# vim: ts=2 sw=2 et
