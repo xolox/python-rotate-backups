@@ -16,7 +16,7 @@ import unittest
 import coloredlogs
 
 # The module we're testing.
-from rotate_backups import main
+from rotate_backups.cli import main
 
 # Initialize a logger for this module.
 logger = logging.getLogger(__name__)

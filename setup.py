@@ -47,12 +47,12 @@ setup(name='rotate-backups',
       author_email='peter@peterodding.com',
       packages=find_packages(),
       entry_points=dict(console_scripts=[
-          'rotate-backups = rotate_backups:main'
+          'rotate-backups = rotate_backups.cli:main'
       ]),
       install_requires=[
           'coloredlogs >= 0.5',
           'executor >= 1.3',
-          'humanfriendly >= 1.9.4',
+          'humanfriendly >= 1.31',
           'naturalsort >= 1.2.1',
           'python-dateutil >= 2.2',
       ],

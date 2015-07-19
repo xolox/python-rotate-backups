@@ -27,15 +27,11 @@ __version__ = '0.1.2'
 import collections
 import datetime
 import functools
-import getopt
 import logging
-import logging.handlers
 import os
 import re
-import sys
 
 # External dependencies.
-import coloredlogs
 import executor
 import humanfriendly
 import natsort
@@ -65,79 +61,6 @@ timestamp_pattern = re.compile(r'''
         (?P<second>\d{2})?
     )?
 ''', re.VERBOSE)
-
-
-def main():
-    """Command line interface."""
-    dry_run = False
-    io_scheduling_class = None
-    rotation_scheme = {}
-    coloredlogs.install()
-    if os.path.exists('/dev/log'):
-        handler = logging.handlers.SysLogHandler(address='/dev/log')
-        handler.setFormatter(logging.Formatter('%(module)s[%(process)d] %(levelname)s %(message)s'))
-        logger.addHandler(handler)
-    # Parse the command line arguments.
-    try:
-        options, arguments = getopt.getopt(sys.argv[1:], 'H:d:w:m:y:i:nvh', [
-            'hourly=', 'daily=', 'weekly=', 'monthly=', 'yearly=', 'ionice=',
-            'dry-run', 'verbose', 'help'
-        ])
-        for option, value in options:
-            if option in ('-H', '--hourly'):
-                rotation_scheme['hourly'] = cast_to_retention_period(value)
-            elif option in ('-d', '--daily'):
-                rotation_scheme['daily'] = cast_to_retention_period(value)
-            elif option in ('-w', '--weekly'):
-                rotation_scheme['weekly'] = cast_to_retention_period(value)
-            elif option in ('-m', '--monthly'):
-                rotation_scheme['monthly'] = cast_to_retention_period(value)
-            elif option in ('-y', '--yearly'):
-                rotation_scheme['yearly'] = cast_to_retention_period(value)
-            elif option in ('-i', '--ionice'):
-                value = value.lower().strip()
-                expected = ('idle', 'best-effort', 'realtime')
-                if value not in expected:
-                    msg = "Invalid I/O scheduling class! (got %r while valid options are %s)"
-                    raise Exception(msg % (value, humanfriendly.concatenate(expected)))
-                io_scheduling_class = value
-            elif option in ('-n', '--dry-run'):
-                logger.info("Performing a dry run (because of %s option) ..", option)
-                dry_run = True
-            elif option in ('-v', '--verbose'):
-                coloredlogs.increase_verbosity()
-            elif option in ('-h', '--help'):
-                usage()
-                return
-            else:
-                assert False, "Unhandled option! (programming error)"
-        logger.debug("Parsed rotation scheme: %s", rotation_scheme)
-        if not arguments:
-            usage()
-            return
-        for pathname in arguments:
-            if not os.path.isdir(pathname):
-                msg = "Directory doesn't exist! (%s)"
-                raise Exception(msg % pathname)
-    except Exception as e:
-        logger.error("%s", e)
-        usage()
-        sys.exit(1)
-    # Rotate the backups in the given directories.
-    for pathname in arguments:
-        rotate_backups(pathname, rotation_scheme, dry_run=dry_run,
-                       io_scheduling_class=io_scheduling_class)
-
-
-def cast_to_retention_period(value):
-    """Cast a command line argument to a retention period (the string 'always' or an integer)."""
-    value = value.strip()
-    if value.lower() == 'always':
-        return 'always'
-    elif value.isdigit():
-        return int(value)
-    else:
-        raise Exception("Invalid number %s!" % value)
 
 
 def rotate_backups(directory, rotation_scheme, dry_run=False, io_scheduling_class=None):
@@ -224,11 +147,6 @@ def rotate_backups(directory, rotation_scheme, dry_run=False, io_scheduling_clas
                 logger.debug("Deleted %s in %s.", backup.pathname, timer)
     if len(backups_to_preserve) == len(backups):
         logger.info("Nothing to do!")
-
-
-def usage():
-    """Show a usage message on the terminal."""
-    print(__doc__.strip())
 
 
 @functools.total_ordering

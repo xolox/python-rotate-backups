@@ -37,8 +37,8 @@ Features
 --------
 
 **Dry run mode**
-  **Use it.** I'm serious. If you don't and ``rotate-backups`` eats more
-  backups than intended you have no right to complain ;-)
+  **Use it.** I'm serious. If you don't and `rotate-backups` eats more backups
+  than intended you have no right to complain ;-)
 
 **Flexible rotation**
   Rotation with any combination of hourly, daily, weekly, monthly and yearly
@@ -64,40 +64,83 @@ Features
   Log messages are saved to the system log (e.g. ``/var/log/syslog``) so you
   can retrace what happened when something seems to have gone wrong.
 
-Status
-------
+Installation
+------------
 
-Note the version number 0.1. That's not to say that ``rotate-backups`` doesn't
-already do exactly what I want it to, I just don't fully trust it yet so won't
-give it a 1.0 version.
+The `rotate-backups` package is available on PyPI_ which means installation
+should be as simple as:
 
-Also, I haven't written automated tests to verify correctness yet, so until
-then please feel free to use the dry run mode to verify that what will happen
-is what you expect.
-
-Getting started
----------------
-
-To install::
+.. code-block:: sh
 
    $ pip install rotate-backups
 
-To run::
+There's actually a multitude of ways to install Python packages (e.g. the `per
+user site-packages directory`_, `virtual environments`_ or just installing
+system wide) and I have no intention of getting into that discussion here, so
+if this intimidates you then read up on your options before returning to these
+instructions ;-).
 
-   $ rotate-backups --help
-   Usage: rotate-backups [OPTIONS] DIRECTORY..
+Usage
+-----
 
-   Supported options:
+There are two ways to use the `rotate-backups` package: As the command line
+program ``rotate-backups`` and as a Python API. For details about the Python
+API please refer to the API documentation available on `Read the Docs`_. The
+command line interface is described below.
 
-    -H, --hourly=NUM    how many hourly backups to preserve
-    -d, --daily=NUM     how many daily backups to preserve
-    -w, --weekly=NUM    how many weekly backups to preserve
-    -m, --monthly=NUM   how many monthly backups to preserve
-    -y, --yearly=NUM    how many yearly backups to preserve
-    -i, --ionice=CLASS  use ionice to set the I/O scheduling class
-    -n, --dry-run       don't make any changes, just print what would be done
-    -v, --verbose       make more noise
-    -h, --help          show this message and exit
+Command line
+~~~~~~~~~~~~
+
+.. A DRY solution to avoid duplication of the `rotate-backups --help' text:
+..
+.. [[[cog
+.. from humanfriendly.usage import inject_usage
+.. inject_usage('rotate_backups.cli')
+.. ]]]
+
+**Usage:** `rotate-backups [OPTIONS] DIRECTORY..`
+
+**Supported options:**
+
+.. csv-table::
+   :header: Option, Description
+   :widths: 30, 70
+
+
+   "``-H``, ``--hourly=COUNT``","Set the number of hourly backups to preserve during rotation:
+   
+   - If ``COUNT`` is an integer it gives the number of hourly backups to preserve,
+     starting from the most recent hourly backup and counting back in time.
+   - You can also pass ""always"" for ``COUNT``, in this case all hourly backups are
+     preserved.
+   - By default no hourly backups are preserved.
+   "
+   "``-d``, ``--daily=COUNT``","Set the number of daily backups to preserve during rotation. Refer to the
+   usage of the ``-H``, ``--hourly`` option for details.
+   "
+   "``-w``, ``--weekly=COUNT``","Set the number of weekly backups to preserve during rotation. Refer to the
+   usage of the ``-H``, ``--hourly`` option for details.
+   "
+   "``-m``, ``--monthly=COUNT``","Set the number of monthly backups to preserve during rotation. Refer to the
+   usage of the ``-H``, ``--hourly`` option for details.
+   "
+   "``-y``, ``--yearly=COUNT``","Set the number of yearly backups to preserve during rotation. Refer to the
+   usage of the ``-H``, ``--hourly`` option for details.
+   "
+   "``-i``, ``--ionice=CLASS``","Use the ""ionice"" program to set the I/O scheduling class and priority of
+   the ""rm"" invocations used to remove backups. ``CLASS`` is expected to be one of
+   the values ""idle"", ""best-effort"" or ""realtime"". Refer to the man page of
+   the ""ionice"" program for details about these values.
+   "
+   "``-n``, ``--dry-run``","Don't make any changes, just print what would be done. This makes it easy
+   to evaluate the impact of a rotation scheme without losing any backups.
+   "
+   "``-v``, ``--verbose``","Make more noise (increase logging verbosity).
+   "
+   "``-h``, ``--help``","Show this message and exit.
+   "
+
+.. [[[end]]]
 
 The last section (see below) contains a real example that shows how rotation
 frequencies can be combined.
@@ -105,9 +148,10 @@ frequencies can be combined.
 Contact
 -------
 
-The latest version of ``rotate-backups`` is available on PyPI_ and GitHub_. For
-bug reports please create an issue on GitHub_. If you have questions,
-suggestions, etc. feel free to send me an e-mail at `peter@peterodding.com`_.
+The latest version of `rotate-backups` is available on PyPI_ and GitHub_. The
+documentation is hosted on `Read the Docs`_. For bug reports please create an
+issue on GitHub_. If you have questions, suggestions, etc. feel free to send me
+an e-mail at `peter@peterodding.com`_.
 
 License
 -------
@@ -399,7 +443,10 @@ information, but you get the idea::
 .. _Easy Automated Snapshot-Style Backups with Linux and Rsync: http://www.mikerubel.org/computers/rsync_snapshots/
 .. _GitHub: https://github.com/xolox/python-rotate-backups
 .. _MIT license: http://en.wikipedia.org/wiki/MIT_License
+.. _per user site-packages directory: https://www.python.org/dev/peps/pep-0370/
 .. _peter@peterodding.com: peter@peterodding.com
 .. _PyPI: https://pypi.python.org/pypi/rotate-backups
 .. _Python Package Index: https://pypi.python.org/pypi/rotate-backups
+.. _Read the Docs: https://rotate-backups.readthedocs.org
 .. _rsync: http://en.wikipedia.org/wiki/rsync
+.. _virtual environments: http://docs.python-guide.org/en/latest/dev/virtualenvs/
