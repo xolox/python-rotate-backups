@@ -1,6 +1,12 @@
 rotate-backups: Simple command line interface for backup rotation
 =================================================================
 
+.. image:: https://travis-ci.org/xolox/python-rotate-backups.svg?branch=master
+   :target: https://travis-ci.org/xolox/python-rotate-backups
+
+.. image:: https://coveralls.io/repos/xolox/python-rotate-backups/badge.svg?branch=master
+   :target: https://coveralls.io/r/xolox/python-rotate-backups?branch=master
+
 Backups are good for you. Most people learn this the hard way (including me).
 Nowadays my Linux laptop automatically creates a full system snapshot every
 four hours by pushing changed files to an `rsync`_ daemon running on the server
