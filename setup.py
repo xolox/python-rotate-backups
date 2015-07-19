@@ -3,7 +3,7 @@
 # Setup script for the `rotate-backups' package.
 #
 # Author: Peter Odding <peter@peterodding.com>
-# Last Change: November 1, 2014
+# Last Change: July 19, 2015
 # URL: https://github.com/xolox/python-rotate-backups
 
 """
@@ -18,13 +18,13 @@ Setup script for the ``rotate-backups`` package.
 
 import re
 from os.path import abspath, dirname, join
-from setuptools import setup
+from setuptools import setup, find_packages
 
 # Find the directory where the source distribution was unpacked.
 source_directory = dirname(abspath(__file__))
 
 # Find the current version.
-module = join(source_directory, 'rotate_backups.py')
+module = join(source_directory, 'rotate_backups', '__init__.py')
 for line in open(module):
     match = re.match(r'^__version__\s*=\s*["\']([^"\']+)["\']$', line)
     if match:
@@ -45,7 +45,7 @@ setup(name='rotate-backups',
       url='https://github.com/xolox/python-rotate-backups',
       author='Peter Odding',
       author_email='peter@peterodding.com',
-      py_modules=['rotate_backups'],
+      packages=find_packages(),
       entry_points=dict(console_scripts=[
           'rotate-backups = rotate_backups:main'
       ]),
