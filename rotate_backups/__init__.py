@@ -11,7 +11,7 @@ The :mod:`rotate_backups` module contains the Python API of the
 """
 
 # Semi-standard module versioning.
-__version__ = '2.0'
+__version__ = '2.1'
 
 # Standard library modules.
 import collections
@@ -129,7 +129,12 @@ class RotateBackups(object):
         :param io_scheduling_class: Use ``ionice`` to set the I/O scheduling class
                                     (expected to be one of the strings 'idle',
                                     'best-effort' or 'realtime').
+        :raises: :exc:`~exceptions.ValueError` when the rotation scheme
+                 dictionary is empty (this would cause all backups to be
+                 deleted).
         """
+        if not rotation_scheme:
+            raise ValueError("Refusing to use empty rotation scheme! (all backups would be deleted)")
         self.rotation_scheme = rotation_scheme
         self.include_list = include_list
         self.exclude_list = exclude_list

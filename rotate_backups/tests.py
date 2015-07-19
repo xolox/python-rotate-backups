@@ -16,6 +16,7 @@ import unittest
 import coloredlogs
 
 # The module we're testing.
+from rotate_backups import RotateBackups
 from rotate_backups.cli import main
 
 # Initialize a logger for this module.
@@ -86,7 +87,9 @@ class RotateBackupsTestCase(unittest.TestCase):
         coloredlogs.install(level=logging.DEBUG)
 
     def test_argument_validation(self):
-        """Test argument validation of the ``ionice`` scheduling class."""
+        """Test argument validation."""
+        # Test that an empty rotation scheme raises an exception.
+        self.assertRaises(ValueError, RotateBackups, rotation_scheme={})
         # Test that an invalid ionice scheduling class causes an error to be reported.
         assert run_cli('--ionice=unsupported-class') != 0
         # Test that an invalid rotation scheme causes an error to be reported.
