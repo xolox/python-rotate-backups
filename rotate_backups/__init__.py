@@ -4,22 +4,6 @@
 # Last Change: July 19, 2015
 # URL: https://github.com/xolox/python-rotate-backups
 
-"""
-Usage: rotate-backups [OPTIONS] DIRECTORY..
-
-Supported options:
-
- -H, --hourly=NUM    how many hourly backups to preserve
- -d, --daily=NUM     how many daily backups to preserve
- -w, --weekly=NUM    how many weekly backups to preserve
- -m, --monthly=NUM   how many monthly backups to preserve
- -y, --yearly=NUM    how many yearly backups to preserve
- -i, --ionice=CLASS  use ionice to set the I/O scheduling class
- -n, --dry-run       don't make any changes, just print what would be done
- -v, --verbose       make more noise
- -h, --help          show this message and exit
-"""
-
 # Semi-standard module versioning.
 __version__ = '0.1.2'
 
@@ -69,11 +53,24 @@ def rotate_backups(directory, rotation_scheme, dry_run=False, io_scheduling_clas
 
     :param directory: The directory containing the backups (a string).
     :param rotation_scheme: A dictionary with one or more of the keys 'hourly',
-                            'daily', 'weekly', 'monthly', 'yearly' and integer
-                            values.
+                            'daily', 'weekly', 'monthly', 'yearly'. Each key is
+                            expected to have one of the following values:
+
+                            - An integer gives the number of backups in the
+                              corresponding category to preserve, starting from
+                              the most recent backup and counting back in
+                              time.
+                            - The string 'always' means all backups in the
+                              corresponding category are preserved (useful for
+                              the biggest time unit in the rotation scheme).
+
+                            By default no backups are preserved for categories
+                            (keys) not present in the dictionary.
     :param dry_run: If this is ``True`` then no changes will be made, which
                     provides a 'preview' of the effect of the rotation scheme
-                    (the default is ``False``).
+                    (the default is ``False``). Right now this is only useful
+                    in the command line interface because there's no return
+                    value.
     :param io_scheduling_class: Use ``ionice`` to set the I/O scheduling class
                                 (expected to be one of the strings 'idle',
                                 'best-effort' or 'realtime').
@@ -152,7 +149,14 @@ def rotate_backups(directory, rotation_scheme, dry_run=False, io_scheduling_clas
 @functools.total_ordering
 class Backup(object):
 
-    """:py:class:`Backup` objects represent a rotation subject."""
+    """
+    :py:class:`Backup` objects represent a rotation subject.
+
+    In addition to the :attr:`type` and :attr:`week` properties :class:`Backup`
+    objects support all of the attributes of :py:class:`~datetime.datetime`
+    objects by deferring attribute access for unknown attributes to the
+    :py:class:`~datetime.datetime` object given to the constructor.
+    """
 
     def __init__(self, pathname, datetime):
         """
@@ -160,7 +164,7 @@ class Backup(object):
 
         :param pathname: The filename of the backup (a string).
         :param datetime: The date/time when the backup was created (a
-                         :py:class:`datetime.datetime` object).
+                         :py:class:`~datetime.datetime` object).
         """
         self.pathname = pathname
         self.datetime = datetime
