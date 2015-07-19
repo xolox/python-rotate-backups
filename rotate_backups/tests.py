@@ -146,6 +146,90 @@ class RotateBackupsTestCase(unittest.TestCase):
             backups_that_were_preserved = set(os.listdir(root))
             assert backups_that_were_preserved == expected_to_be_preserved
 
+    def test_include_list(self):
+        """Test include list logic."""
+        # These are the backups expected to be preserved within the year 2014
+        # (other years are excluded and so should all be preserved, see below).
+        # After each backup I've noted which rotation scheme it falls in.
+        expected_to_be_preserved = set([
+            '2014-01-01@20:07',  # monthly, yearly
+            '2014-02-01@20:05',  # monthly
+            '2014-03-01@20:04',  # monthly
+            '2014-04-01@20:03',  # monthly
+            '2014-05-01@20:06',  # monthly
+            '2014-05-19@20:02',  # weekly
+            '2014-05-26@20:05',  # weekly
+            '2014-06-01@20:01',  # monthly
+            '2014-06-02@20:05',  # weekly
+            '2014-06-09@20:01',  # weekly
+            '2014-06-16@20:02',  # weekly
+            '2014-06-23@20:04',  # weekly
+            '2014-06-26@20:04',  # daily
+            '2014-06-27@20:02',  # daily
+            '2014-06-28@20:02',  # daily
+            '2014-06-29@20:01',  # daily
+            '2014-06-30@20:03',  # daily, weekly
+            '2014-07-01@20:02',  # daily, monthly
+            '2014-07-02@20:03',  # hourly, daily
+            'some-random-directory',  # no recognizable time stamp, should definitely be preserved
+        ])
+        for name in SAMPLE_BACKUP_SET:
+            if not name.startswith('2014-'):
+                expected_to_be_preserved.add(name)
+        with TemporaryDirectory(prefix='rotate-backups-', suffix='-test-suite') as root:
+            self.create_sample_backup_set(root)
+            run_cli(
+                '--verbose', '--ionice=idle', '--hourly=24', '--daily=7',
+                '--weekly=7', '--monthly=12', '--yearly=always',
+                '--include=2014-*', root,
+            )
+            backups_that_were_preserved = set(os.listdir(root))
+            assert backups_that_were_preserved == expected_to_be_preserved
+
+    def test_exclude_list(self):
+        """Test exclude list logic."""
+        # These are the backups expected to be preserved. After each backup
+        # I've noted which rotation scheme it falls in and the number of
+        # preserved backups within that rotation scheme (counting up as we
+        # progress through the backups sorted by date).
+        expected_to_be_preserved = set([
+            '2013-10-10@20:07',  # monthly (1), yearly (1)
+            '2013-11-01@20:06',  # monthly (2)
+            '2013-12-01@20:07',  # monthly (3)
+            '2014-01-01@20:07',  # monthly (4), yearly (2)
+            '2014-02-01@20:05',  # monthly (5)
+            '2014-03-01@20:04',  # monthly (6)
+            '2014-04-01@20:03',  # monthly (7)
+            '2014-05-01@20:06',  # monthly (8)
+            '2014-05-19@20:02',  # weekly (1)
+            '2014-05-26@20:05',  # weekly (2)
+            '2014-06-01@20:01',  # monthly (9)
+            '2014-06-02@20:05',  # weekly (3)
+            '2014-06-09@20:01',  # weekly (4)
+            '2014-06-16@20:02',  # weekly (5)
+            '2014-06-23@20:04',  # weekly (6)
+            '2014-06-26@20:04',  # daily (1)
+            '2014-06-27@20:02',  # daily (2)
+            '2014-06-28@20:02',  # daily (3)
+            '2014-06-29@20:01',  # daily (4)
+            '2014-06-30@20:03',  # daily (5), weekly (7)
+            '2014-07-01@20:02',  # daily (6), monthly (10)
+            '2014-07-02@20:03',  # hourly (1), daily (7)
+            'some-random-directory',  # no recognizable time stamp, should definitely be preserved
+        ])
+        for name in SAMPLE_BACKUP_SET:
+            if name.startswith('2014-05-'):
+                expected_to_be_preserved.add(name)
+        with TemporaryDirectory(prefix='rotate-backups-', suffix='-test-suite') as root:
+            self.create_sample_backup_set(root)
+            run_cli(
+                '--verbose', '--ionice=idle', '--hourly=24', '--daily=7',
+                '--weekly=7', '--monthly=12', '--yearly=always',
+                '--exclude=2014-05-*', root,
+            )
+            backups_that_were_preserved = set(os.listdir(root))
+            assert backups_that_were_preserved == expected_to_be_preserved
+
     def create_sample_backup_set(self, root):
         """Create a sample backup set to be rotated."""
         for name in SAMPLE_BACKUP_SET:

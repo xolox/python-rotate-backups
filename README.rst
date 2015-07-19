@@ -100,6 +100,10 @@ Command line
 
 **Usage:** `rotate-backups [OPTIONS] DIRECTORY..`
 
+Easy rotation of backups based on the Python package by the same name. To use this program you specify a rotation scheme via (a combination of) the ``--hourly``, ``--daily``, ``--weekly``, ``--monthly`` and/or ``--yearly`` options and specify the directory (or multiple directories) containing backups to rotate as one or more positional arguments.
+
+Please use the ``--dry-run`` option to test the effect of the specified rotation scheme before letting this program loose on your precious backups! If you don't test the results using the dry run mode and this program eats more backups than intended you have no right to complain ;-).
+
 **Supported options:**
 
 .. csv-table::
@@ -127,6 +131,14 @@ Command line
    "``-y``, ``--yearly=COUNT``","Set the number of yearly backups to preserve during rotation. Refer to the
    usage of the ``-H``, ``--hourly`` option for details.
    "
+   "``-I``, ``--include=PATTERN``","Only process backups that match the shell pattern given by ``PATTERN``. This
+   argument can be repeated. Make sure to quote ``PATTERN`` so the shell doesn't
+   expand the pattern before it's received by rotate-backups.
+   "
+   "``-x``, ``--exclude=PATTERN``","Don't process backups that match the shell pattern given by ``PATTERN``. This
+   argument can be repeated. Make sure to quote ``PATTERN`` so the shell doesn't
+   expand the pattern before it's received by rotate-backups.
+   "
    "``-i``, ``--ionice=CLASS``","Use the ""ionice"" program to set the I/O scheduling class and priority of
    the ""rm"" invocations used to remove backups. ``CLASS`` is expected to be one of
    the values ""idle"", ""best-effort"" or ""realtime"". Refer to the man page of
@@ -147,8 +159,6 @@ frequencies can be combined.
 
 To-do list
 ----------
-
-- Merge `pull request #1 <https://github.com/xolox/python-rotate-backups/pull/1>`_.
 
 - Improve the Python code to make it easier to integrate into other projects as
   a Python API.

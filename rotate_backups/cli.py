@@ -7,6 +7,17 @@
 """
 Usage: rotate-backups [OPTIONS] DIRECTORY..
 
+Easy rotation of backups based on the Python package by the same name. To use
+this program you specify a rotation scheme via (a combination of) the --hourly,
+--daily, --weekly, --monthly and/or --yearly options and specify the directory
+(or multiple directories) containing backups to rotate as one or more
+positional arguments.
+
+Please use the --dry-run option to test the effect of the specified rotation
+scheme before letting this program loose on your precious backups! If you don't
+test the results using the dry run mode and this program eats more backups than
+intended you have no right to complain ;-).
+
 Supported options:
 
   -H, --hourly=COUNT
@@ -39,6 +50,18 @@ Supported options:
     Set the number of yearly backups to preserve during rotation. Refer to the
     usage of the -H, --hourly option for details.
 
+  -I, --include=PATTERN
+
+    Only process backups that match the shell pattern given by PATTERN. This
+    argument can be repeated. Make sure to quote PATTERN so the shell doesn't
+    expand the pattern before it's received by rotate-backups.
+
+  -x, --exclude=PATTERN
+
+    Don't process backups that match the shell pattern given by PATTERN. This
+    argument can be repeated. Make sure to quote PATTERN so the shell doesn't
+    expand the pattern before it's received by rotate-backups.
+
   -i, --ionice=CLASS
 
     Use the `ionice' program to set the I/O scheduling class and priority of
@@ -59,9 +82,6 @@ Supported options:
 
     Show this message and exit.
 """
-
-# Semi-standard module versioning.
-__version__ = '0.1.2'
 
 # Standard library modules.
 import getopt
@@ -84,19 +104,22 @@ logger = logging.getLogger(__name__)
 
 def main():
     """Command line interface for the ``rotate-backups`` program."""
-    dry_run = False
-    io_scheduling_class = None
-    rotation_scheme = {}
     coloredlogs.install()
     if os.path.exists('/dev/log'):
         handler = logging.handlers.SysLogHandler(address='/dev/log')
         handler.setFormatter(logging.Formatter('%(module)s[%(process)d] %(levelname)s %(message)s'))
         logger.addHandler(handler)
+    # Command line option defaults.
+    dry_run = False
+    exclude_list = []
+    include_list = []
+    io_scheduling_class = None
+    rotation_scheme = {}
     # Parse the command line arguments.
     try:
-        options, arguments = getopt.getopt(sys.argv[1:], 'H:d:w:m:y:i:nvh', [
-            'hourly=', 'daily=', 'weekly=', 'monthly=', 'yearly=', 'ionice=',
-            'dry-run', 'verbose', 'help'
+        options, arguments = getopt.getopt(sys.argv[1:], 'H:d:w:m:y:I:x:i:nvh', [
+            'hourly=', 'daily=', 'weekly=', 'monthly=', 'yearly=', 'include=',
+            'exclude=', 'ionice=', 'dry-run', 'verbose', 'help',
         ])
         for option, value in options:
             if option in ('-H', '--hourly'):
@@ -109,6 +132,10 @@ def main():
                 rotation_scheme['monthly'] = cast_to_retention_period(value)
             elif option in ('-y', '--yearly'):
                 rotation_scheme['yearly'] = cast_to_retention_period(value)
+            elif option in ('-I', '--include'):
+                include_list.append(value)
+            elif option in ('-x', '--exclude'):
+                exclude_list.append(value)
             elif option in ('-i', '--ionice'):
                 value = value.lower().strip()
                 expected = ('idle', 'best-effort', 'realtime')
@@ -139,8 +166,14 @@ def main():
         sys.exit(1)
     # Rotate the backups in the given directories.
     for pathname in arguments:
-        rotate_backups(pathname, rotation_scheme, dry_run=dry_run,
-                       io_scheduling_class=io_scheduling_class)
+        rotate_backups(
+            directory=pathname,
+            rotation_scheme=rotation_scheme,
+            include_list=include_list,
+            exclude_list=exclude_list,
+            io_scheduling_class=io_scheduling_class,
+            dry_run=dry_run,
+        )
 
 
 def cast_to_retention_period(value):

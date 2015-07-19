@@ -5,11 +5,12 @@
 # URL: https://github.com/xolox/python-rotate-backups
 
 # Semi-standard module versioning.
-__version__ = '1.0'
+__version__ = '1.1'
 
 # Standard library modules.
 import collections
 import datetime
+import fnmatch
 import functools
 import logging
 import os
@@ -47,7 +48,8 @@ timestamp_pattern = re.compile(r'''
 ''', re.VERBOSE)
 
 
-def rotate_backups(directory, rotation_scheme, dry_run=False, io_scheduling_class=None):
+def rotate_backups(directory, rotation_scheme, include_list=[], exclude_list=[],
+                   dry_run=False, io_scheduling_class=None):
     """
     Rotate the backups in a directory according to a flexible rotation scheme.
 
@@ -66,6 +68,14 @@ def rotate_backups(directory, rotation_scheme, dry_run=False, io_scheduling_clas
 
                             By default no backups are preserved for categories
                             (keys) not present in the dictionary.
+    :param include_list: A list of strings with :mod:`fnmatch` patterns. If a
+                         nonempty include list is specified each backup must
+                         match a pattern in the include list, otherwise it
+                         will be ignored.
+    :param exclude_list: A list of strings with :mod:`fnmatch` patterns. If a
+                         backup matches the exclude list it will be ignored,
+                         *even if it also matched the include list* (it's the
+                         only logical way to combine both lists).
     :param dry_run: If this is ``True`` then no changes will be made, which
                     provides a 'preview' of the effect of the rotation scheme
                     (the default is ``False``). Right now this is only useful
@@ -80,10 +90,19 @@ def rotate_backups(directory, rotation_scheme, dry_run=False, io_scheduling_clas
     directory = os.path.abspath(directory)
     logger.info("Scanning directory for timestamped backups: %s", directory)
     for entry in natsort(os.listdir(directory)):
+        # Check for a time stamp in the directory entry's name.
         match = timestamp_pattern.search(entry)
         if match:
-            backups.add(Backup(pathname=os.path.join(directory, entry),
-                               datetime=datetime.datetime(*(int(group, 10) for group in match.groups('0')))))
+            # Make sure the entry matches the given include/exclude patterns.
+            if exclude_list and any(fnmatch.fnmatch(entry, p) for p in exclude_list):
+                logger.debug("Excluded %r (it matched the exclude list).", entry)
+            elif include_list and not any(fnmatch.fnmatch(entry, p) for p in include_list):
+                logger.debug("Excluded %r (it didn't match the include list).", entry)
+            else:
+                backups.add(Backup(
+                    pathname=os.path.join(directory, entry),
+                    datetime=datetime.datetime(*(int(group, 10) for group in match.groups('0'))),
+                ))
         else:
             logger.debug("Failed to match time stamp in filename: %s", entry)
     if not backups:
