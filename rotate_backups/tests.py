@@ -1,11 +1,10 @@
 # Test suite for the `rotate-backups' Python package.
 #
 # Author: Peter Odding <peter@peterodding.com>
-# Last Change: July 19, 2015
+# Last Change: August 30, 2015
 # URL: https://github.com/xolox/python-rotate-backups
 
 # Standard library modules.
-import ConfigParser
 import logging
 import os
 import shutil
@@ -15,6 +14,7 @@ import unittest
 
 # External dependencies.
 import coloredlogs
+from six.moves import configparser
 
 # The module we're testing.
 from rotate_backups import load_config_file, RotateBackups
@@ -147,7 +147,7 @@ class RotateBackupsTestCase(unittest.TestCase):
         with TemporaryDirectory(prefix='rotate-backups-', suffix='-test-suite') as root:
             # Specify the rotation scheme and options through a configuration file.
             config_file = os.path.join(root, 'rotate-backups.ini')
-            parser = ConfigParser.RawConfigParser()
+            parser = configparser.RawConfigParser()
             parser.add_section(root)
             parser.set(root, 'hourly', '24')
             parser.set(root, 'daily', '7')

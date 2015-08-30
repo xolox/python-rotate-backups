@@ -1,7 +1,7 @@
 # rotate-backups: Simple command line interface for backup rotation.
 #
 # Author: Peter Odding <peter@peterodding.com>
-# Last Change: July 19, 2015
+# Last Change: August 30, 2015
 # URL: https://github.com/xolox/python-rotate-backups
 
 """
@@ -11,11 +11,10 @@ The :mod:`rotate_backups` module contains the Python API of the
 """
 
 # Semi-standard module versioning.
-__version__ = '2.2'
+__version__ = '2.3'
 
 # Standard library modules.
 import collections
-import ConfigParser
 import datetime
 import fnmatch
 import functools
@@ -29,6 +28,7 @@ from executor import execute
 from humanfriendly import format_path, parse_path, Timer
 from humanfriendly.text import concatenate, split
 from natsort import natsort
+from six.moves import configparser
 
 # Initialize a logger for this module.
 logger = logging.getLogger(__name__)
@@ -100,7 +100,7 @@ def load_config_file(configuration_file=None):
     used by :class:`RotateBackups` to discover rotation schemes and by
     :func:`rotate_all_backups()` to discover directories with backups.
     """
-    parser = ConfigParser.RawConfigParser()
+    parser = configparser.RawConfigParser()
     if configuration_file:
         logger.debug("Using custom configuration file: %s", format_path(configuration_file))
         loaded_files = parser.read(configuration_file)
@@ -356,7 +356,7 @@ class RotateBackups(object):
                     # Remove backups created before the minimum date of this
                     # rotation frequency (relative to the most recent backup).
                     minimum_date = most_recent_backup - SUPPORTED_FREQUENCIES[frequency] * retention_period
-                    for period, backups_in_period in backups.items():
+                    for period, backups_in_period in list(backups.items()):
                         for backup in backups_in_period:
                             if backup.datetime < minimum_date:
                                 backups_in_period.remove(backup)
