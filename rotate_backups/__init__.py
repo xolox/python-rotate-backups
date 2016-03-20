@@ -1,7 +1,7 @@
 # rotate-backups: Simple command line interface for backup rotation.
 #
 # Author: Peter Odding <peter@peterodding.com>
-# Last Change: August 30, 2015
+# Last Change: March 20, 2016
 # URL: https://github.com/xolox/python-rotate-backups
 
 """
@@ -97,8 +97,23 @@ def coerce_retention_period(value):
 
 def load_config_file(configuration_file=None):
     """
-    used by :class:`RotateBackups` to discover rotation schemes and by
-    :func:`rotate_all_backups()` to discover directories with backups.
+    Load a configuration file with backup directories and rotation schemes.
+
+    :param configuration_file: Override the pathname of the configuration file
+                               to load (a string or :data:`None`).
+    :returns: A generator of tuples with three values each:
+
+              1. The pathname of an existing directory (a string).
+              2. A dictionary with the configured rotation scheme.
+              3. A dictionary with additional options.
+    :raises: :exc:`~exceptions.ValueError` when `configuration_file` is given
+             but doesn't exist or can't be loaded.
+
+    When `configuration_file` isn't given :data:`LOCAL_CONFIG_FILE` and
+    :data:`GLOBAL_CONFIG_FILE` are checked and the first configuration file
+    that exists is loaded. This function is used by :class:`RotateBackups` to
+    discover user defined rotation schemes and by :mod:`rotate_backups.cli` to
+    discover directories for which backup rotation is configured.
     """
     parser = configparser.RawConfigParser()
     if configuration_file:
@@ -108,7 +123,7 @@ def load_config_file(configuration_file=None):
             msg = "Failed to read configuration file! (%s)"
             raise ValueError(msg % configuration_file)
     else:
-        for config_file in [LOCAL_CONFIG_FILE, GLOBAL_CONFIG_FILE]:
+        for config_file in LOCAL_CONFIG_FILE, GLOBAL_CONFIG_FILE:
             pathname = parse_path(config_file)
             if parser.read(pathname):
                 logger.debug("Using configuration file %s ..", format_path(pathname))
