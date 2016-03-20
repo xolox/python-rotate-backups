@@ -14,3 +14,9 @@ This documentation is based on the source code of version |release| of the
 
 .. automodule:: rotate_backups
    :members:
+
+:mod:`rotate_backups.cli`
+-------------------------
+
+.. automodule:: rotate_backups.cli
+   :members:

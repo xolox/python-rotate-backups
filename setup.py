@@ -3,7 +3,7 @@
 # Setup script for the `rotate-backups' package.
 #
 # Author: Peter Odding <peter@peterodding.com>
-# Last Change: August 30, 2015
+# Last Change: March 20, 2016
 # URL: https://github.com/xolox/python-rotate-backups
 
 """
@@ -57,7 +57,7 @@ setup(name='rotate-backups',
       install_requires=[
           'coloredlogs >= 0.5',
           'executor >= 1.3',
-          'humanfriendly >= 1.33',
+          'humanfriendly >= 1.44.5',
           'naturalsort >= 1.4',
           'python-dateutil >= 2.2',
           'six >= 1.9.0',

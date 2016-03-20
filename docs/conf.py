@@ -1,7 +1,6 @@
 # -*- coding: utf-8 -*-
-#
-# documentation build configuration file for the 'rotate-backups' package. This
-# file is execfile()d with the current directory set to its containing dir.
+
+"""Documentation build configuration file for the `rotate-backups` package."""
 
 import os
 import sys
@@ -12,7 +11,13 @@ sys.path.insert(0, os.path.abspath('..'))
 # -- General configuration -----------------------------------------------------
 
 # Sphinx extension module names.
-extensions = ['sphinx.ext.doctest', 'sphinx.ext.autodoc', 'sphinx.ext.intersphinx']
+extensions = [
+    'sphinx.ext.autodoc',
+    'sphinx.ext.doctest',
+    'sphinx.ext.intersphinx',
+    'sphinx.ext.viewcode',
+    'humanfriendly.sphinx',
+]
 
 # Configuration for the `autodoc' extension.
 autodoc_member_order = 'bysource'
@@ -35,7 +40,7 @@ copyright = u'2016, Peter Odding'
 # built documents.
 
 # Find the package version and make it the release.
-from rotate_backups import __version__ as rotate_backups_version
+from rotate_backups import __version__ as rotate_backups_version  # noqa
 
 # The short X.Y version.
 version = '.'.join(rotate_backups_version.split('.')[:2])
@@ -72,9 +77,3 @@ html_theme = 'default'
 
 # Output file base name for HTML help builder.
 htmlhelp_basename = 'rotatebackupsdoc'
-
-
-def setup(app):
-    # Based on http://stackoverflow.com/a/5599712/788200.
-    app.connect('autodoc-skip-member', (lambda app, what, name, obj, skip, options:
-                                        False if name == '__init__' and obj.__doc__ else skip))

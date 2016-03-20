@@ -121,43 +121,32 @@ Please use the ``--dry-run`` option to test the effect of the specified rotation
      starting from the most recent hourly backup and counting back in time.
    - You can also pass ""always"" for ``COUNT``, in this case all hourly backups are
      preserved.
-   - By default no hourly backups are preserved.
-   "
+   - By default no hourly backups are preserved."
    "``-d``, ``--daily=COUNT``","Set the number of daily backups to preserve during rotation. Refer to the
-   usage of the ``-H``, ``--hourly`` option for details.
-   "
+   usage of the ``-H``, ``--hourly`` option for details."
    "``-w``, ``--weekly=COUNT``","Set the number of weekly backups to preserve during rotation. Refer to the
-   usage of the ``-H``, ``--hourly`` option for details.
-   "
+   usage of the ``-H``, ``--hourly`` option for details."
    "``-m``, ``--monthly=COUNT``","Set the number of monthly backups to preserve during rotation. Refer to the
-   usage of the ``-H``, ``--hourly`` option for details.
-   "
+   usage of the ``-H``, ``--hourly`` option for details."
    "``-y``, ``--yearly=COUNT``","Set the number of yearly backups to preserve during rotation. Refer to the
-   usage of the ``-H``, ``--hourly`` option for details.
-   "
+   usage of the ``-H``, ``--hourly`` option for details."
    "``-I``, ``--include=PATTERN``","Only process backups that match the shell pattern given by ``PATTERN``. This
    argument can be repeated. Make sure to quote ``PATTERN`` so the shell doesn't
-   expand the pattern before it's received by rotate-backups.
-   "
+   expand the pattern before it's received by rotate-backups."
    "``-x``, ``--exclude=PATTERN``","Don't process backups that match the shell pattern given by ``PATTERN``. This
    argument can be repeated. Make sure to quote ``PATTERN`` so the shell doesn't
-   expand the pattern before it's received by rotate-backups.
-   "
+   expand the pattern before it's received by rotate-backups."
    "``-i``, ``--ionice=CLASS``","Use the ""ionice"" program to set the I/O scheduling class and priority of
    the ""rm"" invocations used to remove backups. ``CLASS`` is expected to be one of
    the values ""idle"", ""best-effort"" or ""realtime"". Refer to the man page of
-   the ""ionice"" program for details about these values.
-   "
+   the ""ionice"" program for details about these values."
    "``-c``, ``--config=PATH``","Load configuration from the pathname given by ``PATH``. If this option isn't
    given two default locations are checked: ""~/.rotate-backups.ini"" and
    ""/etc/rotate-backups.ini"". The first of these two configuration files to
-   exist is loaded. For more details refer to the online documentation.
-   "
+   exist is loaded. For more details refer to the online documentation."
    "``-n``, ``--dry-run``","Don't make any changes, just print what would be done. This makes it easy
-   to evaluate the impact of a rotation scheme without losing any backups.
-   "
-   "``-v``, ``--verbose``","Make more noise (increase logging verbosity).
-   "
+   to evaluate the impact of a rotation scheme without losing any backups."
+   "``-v``, ``--verbose``",Make more noise (increase logging verbosity).
    "``-h``, ``--help``","Show this message and exit.
    "
 
