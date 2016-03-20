@@ -1,7 +1,7 @@
 # rotate-backups: Simple command line interface for backup rotation.
 #
 # Author: Peter Odding <peter@peterodding.com>
-# Last Change: July 19, 2015
+# Last Change: March 20, 2016
 # URL: https://github.com/xolox/python-rotate-backups
 
 """
@@ -97,7 +97,6 @@ Supported options:
 # Standard library modules.
 import getopt
 import logging
-import logging.handlers
 import os
 import sys
 
@@ -115,11 +114,7 @@ logger = logging.getLogger(__name__)
 
 def main():
     """Command line interface for the ``rotate-backups`` program."""
-    coloredlogs.install()
-    if os.path.exists('/dev/log'):
-        handler = logging.handlers.SysLogHandler(address='/dev/log')
-        handler.setFormatter(logging.Formatter('%(module)s[%(process)d] %(levelname)s %(message)s'))
-        logger.addHandler(handler)
+    coloredlogs.install(syslog=True)
     # Command line option defaults.
     config_file = None
     dry_run = False

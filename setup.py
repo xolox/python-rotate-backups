@@ -55,7 +55,7 @@ setup(name='rotate-backups',
           'rotate-backups = rotate_backups.cli:main'
       ]),
       install_requires=[
-          'coloredlogs >= 0.5',
+          'coloredlogs >= 5.0',
           'executor >= 1.3',
           'humanfriendly >= 1.44.5',
           'naturalsort >= 1.4',
