@@ -1,7 +1,7 @@
 # Makefile for rotate-backups
 #
 # Author: Peter Odding <peter@peterodding.com>
-# Last Change: July 19, 2015
+# Last Change: March 21, 2016
 # URL: https://github.com/xolox/python-rotate-backups
 
 WORKON_HOME ?= $(HOME)/.virtualenvs
@@ -15,8 +15,8 @@ default:
 	@echo
 	@echo '    make install    install the package in a virtual environment'
 	@echo '    make reset      recreate the virtual environment'
-	@echo '    make test       run the test suite'
-	@echo '    make coverage   run the tests, report coverage'
+	@echo '    make test       run the test suite, report coverage'
+	@echo '    make check      check the coding style'
 	@echo '    make docs       update documentation using Sphinx'
 	@echo '    make publish    publish changes to GitHub/PyPI'
 	@echo '    make clean      cleanup all temporary files'
@@ -34,17 +34,14 @@ reset:
 	make --no-print-directory clean install
 
 test: install
-	test -x "$(VIRTUAL_ENV)/bin/py.test" || ($(ACTIVATE) && pip-accel install pytest)
-	$(ACTIVATE) && py.test -v
-	$(ACTIVATE) && make coverage
-	test -x "$(VIRTUAL_ENV)/bin/tox" || ($(ACTIVATE) && pip-accel install tox)
+	$(ACTIVATE) && pip-accel install --quiet coverage pytest pytest-cov tox
+	$(ACTIVATE) && py.test --cov -v
+	$(ACTIVATE) && coverage html
 	$(ACTIVATE) && tox
 
-coverage: install
-	$(ACTIVATE) && pip-accel install coverage
-	$(ACTIVATE) && coverage run setup.py test
-	$(ACTIVATE) && coverage report
-	$(ACTIVATE) && coverage html
+check: install
+	$(ACTIVATE) && pip-accel install --quiet flake8 flake8-pep257
+	$(ACTIVATE) && flake8
 
 readme:
 	test -x "$(VIRTUAL_ENV)/bin/cog.py" || ($(ACTIVATE) && pip-accel install cogapp)
@@ -63,4 +60,4 @@ clean:
 	find -depth -type d -name __pycache__ -exec rm -Rf {} \;
 	find -type f -name '*.pyc' -delete
 
-.PHONY: default install reset test coverage docs publish clean
+.PHONY: default install reset test check readme docs publish clean
