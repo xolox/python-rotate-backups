@@ -3,7 +3,7 @@
 # Setup script for the `rotate-backups' package.
 #
 # Author: Peter Odding <peter@peterodding.com>
-# Last Change: March 20, 2016
+# Last Change: March 21, 2016
 # URL: https://github.com/xolox/python-rotate-backups
 
 """
@@ -73,10 +73,12 @@ setup(name='rotate-backups',
           'Operating System :: Unix',
           'Programming Language :: Python',
           'Programming Language :: Python :: 2',
-          'Programming Language :: Python :: 2.6',
           'Programming Language :: Python :: 2.7',
           'Programming Language :: Python :: 3',
           'Programming Language :: Python :: 3.4',
+          'Programming Language :: Python :: 3.5',
+          'Programming Language :: Python :: Implementation :: CPython',
+          'Programming Language :: Python :: Implementation :: PyPy',
           'Topic :: Software Development :: Libraries :: Python Modules',
           'Topic :: Software Development',
           'Topic :: System :: Archiving :: Backup',

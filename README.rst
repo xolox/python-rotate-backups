@@ -30,7 +30,8 @@ copy/pasting these scripts around I decided to bring the main features together
 in a properly documented Python package and upload it to the `Python Package
 Index`_.
 
-The `rotate-backups` package is currently tested on Python 2.7, 3.4 and PyPy.
+The `rotate-backups` package is currently tested on Python 2.7, 3.4, 3.5 and
+PyPy (2.7).
 
 .. contents::
    :local:
