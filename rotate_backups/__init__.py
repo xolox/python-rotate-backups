@@ -1,17 +1,16 @@
 # rotate-backups: Simple command line interface for backup rotation.
 #
 # Author: Peter Odding <peter@peterodding.com>
-# Last Change: March 20, 2016
+# Last Change: March 21, 2016
 # URL: https://github.com/xolox/python-rotate-backups
 
 """
+Simple to use Python API for rotation of backups.
+
 The :mod:`rotate_backups` module contains the Python API of the
 `rotate-backups` package. The core logic of the package is contained in the
 :class:`RotateBackups` class.
 """
-
-# Semi-standard module versioning.
-__version__ = '2.3'
 
 # Standard library modules.
 import collections
@@ -29,6 +28,9 @@ from humanfriendly import format_path, parse_path, Timer
 from humanfriendly.text import concatenate, split
 from natsort import natsort
 from six.moves import configparser
+
+# Semi-standard module versioning.
+__version__ = '2.3'
 
 # Initialize a logger for this module.
 logger = logging.getLogger(__name__)

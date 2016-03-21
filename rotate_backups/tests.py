@@ -1,8 +1,10 @@
 # Test suite for the `rotate-backups' Python package.
 #
 # Author: Peter Odding <peter@peterodding.com>
-# Last Change: August 30, 2015
+# Last Change: March 21, 2016
 # URL: https://github.com/xolox/python-rotate-backups
+
+"""Test suite for the `rotate-backups` package."""
 
 # Standard library modules.
 import logging
@@ -82,6 +84,8 @@ SAMPLE_BACKUP_SET = set([
 
 
 class RotateBackupsTestCase(unittest.TestCase):
+
+    """:mod:`unittest` compatible container for `rotate-backups` tests."""
 
     def setUp(self):
         """Enable verbose logging for the test suite."""
@@ -249,6 +253,7 @@ class RotateBackupsTestCase(unittest.TestCase):
 
 
 def run_cli(*arguments):
+    """Simple wrapper to run :func:`rotate_backups.cli.main()` in the same process."""
     # Temporarily replace sys.argv.
     saved_arguments = sys.argv
     sys.argv = ['rotate-backups'] + list(arguments)
@@ -287,17 +292,13 @@ class TemporaryDirectory(object):
         self.options = options
 
     def __enter__(self):
-        """
-        Create the temporary directory.
-        """
+        """Create the temporary directory."""
         self.temporary_directory = tempfile.mkdtemp(**self.options)
         logger.debug("Created temporary directory: %s", self.temporary_directory)
         return self.temporary_directory
 
     def __exit__(self, exc_type, exc_value, traceback):
-        """
-        Destroy the temporary directory.
-        """
+        """Destroy the temporary directory."""
         logger.debug("Cleaning up temporary directory: %s", self.temporary_directory)
         shutil.rmtree(self.temporary_directory)
         del self.temporary_directory
