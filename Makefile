@@ -16,6 +16,7 @@ default:
 	@echo '    make install    install the package in a virtual environment'
 	@echo '    make reset      recreate the virtual environment'
 	@echo '    make test       run the test suite, report coverage'
+	@echo '    make tox        run the tests on all Python versions'
 	@echo '    make check      check the coding style'
 	@echo '    make docs       update documentation using Sphinx'
 	@echo '    make publish    publish changes to GitHub/PyPI'
@@ -25,30 +26,33 @@ default:
 install:
 	test -d "$(VIRTUAL_ENV)" || virtualenv "$(VIRTUAL_ENV)"
 	test -x "$(VIRTUAL_ENV)/bin/pip" || ($(ACTIVATE) && easy_install pip)
-	test -x "$(VIRTUAL_ENV)/bin/pip-accel" || ($(ACTIVATE) && pip install pip-accel)
-	$(ACTIVATE) && pip uninstall -y rotate-backups >/dev/null 2>&1 || true
-	$(ACTIVATE) && pip install --quiet --editable .
+	test -x "$(VIRTUAL_ENV)/bin/pip-accel" || ($(ACTIVATE) && pip install --quiet pip-accel)
+	$(ACTIVATE) && pip uninstall --yes rotate-backups >/dev/null 2>&1 || true
+	$(ACTIVATE) && pip-accel install --quiet --editable .
 
 reset:
 	rm -Rf "$(VIRTUAL_ENV)"
 	make --no-print-directory clean install
 
 test: install
-	$(ACTIVATE) && pip-accel install --quiet coverage pytest pytest-cov tox
-	$(ACTIVATE) && py.test --cov -v
+	$(ACTIVATE) && pip-accel install --quiet coverage pytest pytest-cov
+	$(ACTIVATE) && py.test -v --cov --cov-fail-under=90
 	$(ACTIVATE) && coverage html
+
+tox: install
+	$(ACTIVATE) && pip-accel install --quiet tox
 	$(ACTIVATE) && tox
 
 check: install
 	$(ACTIVATE) && pip-accel install --quiet flake8 flake8-pep257
 	$(ACTIVATE) && flake8
 
-readme:
-	test -x "$(VIRTUAL_ENV)/bin/cog.py" || ($(ACTIVATE) && pip-accel install cogapp)
+readme: install
+	test -x "$(VIRTUAL_ENV)/bin/cog.py" || ($(ACTIVATE) && pip-accel install --quiet cogapp)
 	$(ACTIVATE) && cog.py -r README.rst
 
 docs: install
-	test -x "$(VIRTUAL_ENV)/bin/sphinx-build" || ($(ACTIVATE) && pip-accel install sphinx)
+	test -x "$(VIRTUAL_ENV)/bin/sphinx-build" || ($(ACTIVATE) && pip-accel install --quiet sphinx)
 	$(ACTIVATE) && cd docs && sphinx-build -b html -d build/doctrees . build/html
 
 publish:
@@ -60,4 +64,4 @@ clean:
 	find -depth -type d -name __pycache__ -exec rm -Rf {} \;
 	find -type f -name '*.pyc' -delete
 
-.PHONY: default install reset test check readme docs publish clean
+.PHONY: default install reset test tox check readme docs publish clean

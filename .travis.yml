@@ -9,7 +9,6 @@ install:
   - LC_ALL=C pip install .
 script:
   - make check
-  - coverage run setup.py test
-  - coverage report --fail-under=90
+  - make test
 after_success:
   - coveralls
