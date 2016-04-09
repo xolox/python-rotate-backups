@@ -148,6 +148,7 @@ Please use the ``--dry-run`` option to test the effect of the specified rotation
    "``-n``, ``--dry-run``","Don't make any changes, just print what would be done. This makes it easy
    to evaluate the impact of a rotation scheme without losing any backups."
    "``-v``, ``--verbose``",Make more noise (increase logging verbosity).
+   "``-q``, ``--quiet``",Make less noise (decrease logging verbosity).
    "``-h``, ``--help``","Show this message and exit.
    "
 

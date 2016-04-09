@@ -1,7 +1,7 @@
 # rotate-backups: Simple command line interface for backup rotation.
 #
 # Author: Peter Odding <peter@peterodding.com>
-# Last Change: March 20, 2016
+# Last Change: March 21, 2016
 # URL: https://github.com/xolox/python-rotate-backups
 
 """
@@ -89,6 +89,10 @@ Supported options:
 
     Make more noise (increase logging verbosity).
 
+  -q, --quiet
+
+    Make less noise (decrease logging verbosity).
+
   -h, --help
 
     Show this message and exit.
@@ -124,9 +128,10 @@ def main():
     rotation_scheme = {}
     # Parse the command line arguments.
     try:
-        options, arguments = getopt.getopt(sys.argv[1:], 'H:d:w:m:y:I:x:i:c:nvh', [
+        options, arguments = getopt.getopt(sys.argv[1:], 'H:d:w:m:y:I:x:i:c:nvqh', [
             'hourly=', 'daily=', 'weekly=', 'monthly=', 'yearly=', 'include=',
-            'exclude=', 'ionice=', 'config=', 'dry-run', 'verbose', 'help',
+            'exclude=', 'ionice=', 'config=', 'dry-run', 'verbose', 'quiet',
+            'help',
         ])
         for option, value in options:
             if option in ('-H', '--hourly'):
@@ -157,6 +162,8 @@ def main():
                 dry_run = True
             elif option in ('-v', '--verbose'):
                 coloredlogs.increase_verbosity()
+            elif option in ('-q', '--quiet'):
+                coloredlogs.decrease_verbosity()
             elif option in ('-h', '--help'):
                 usage(__doc__)
                 return
