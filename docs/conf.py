@@ -67,6 +67,8 @@ pygments_style = 'sphinx'
 intersphinx_mapping = {
     'python': ('http://docs.python.org', None),
     'dateutil': ('https://dateutil.readthedocs.org/en/latest/', None),
+    'executor': ('https://executor.readthedocs.org/en/latest/', None),
+    'propertymanager': ('https://property-manager.readthedocs.org/en/latest/', None),
 }
 
 # -- Options for HTML output ---------------------------------------------------

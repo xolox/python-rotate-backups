@@ -1,7 +1,7 @@
 # Test suite for the `rotate-backups' Python package.
 #
 # Author: Peter Odding <peter@peterodding.com>
-# Last Change: March 21, 2016
+# Last Change: April 13, 2016
 # URL: https://github.com/xolox/python-rotate-backups
 
 """Test suite for the `rotate-backups` package."""
@@ -100,7 +100,7 @@ class RotateBackupsTestCase(unittest.TestCase):
         # Argument validation tests that require an empty directory.
         with TemporaryDirectory(prefix='rotate-backups-', suffix='-test-suite') as root:
             # Test that non-existing directories cause an error to be reported.
-            assert run_cli(os.path.join(root, 'does-not-exist')) != 0
+            self.assertRaises(ValueError, lambda: run_cli(os.path.join(root, 'does-not-exist')))
             # Test that loading of a custom configuration file raises an
             # exception when the configuration file cannot be loaded.
             self.assertRaises(ValueError, lambda: list(load_config_file(os.path.join(root, 'rotate-backups.ini'))))
@@ -287,7 +287,7 @@ class TemporaryDirectory(object):
         Initialize context manager that manages creation & cleanup of temporary directory.
 
         :param options: Any keyword arguments are passed on to
-                        :py:func:`tempfile.mkdtemp()`.
+                        :func:`tempfile.mkdtemp()`.
         """
         self.options = options
 

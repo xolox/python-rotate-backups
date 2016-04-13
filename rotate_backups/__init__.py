@@ -1,7 +1,7 @@
 # rotate-backups: Simple command line interface for backup rotation.
 #
 # Author: Peter Odding <peter@peterodding.com>
-# Last Change: March 21, 2016
+# Last Change: April 13, 2016
 # URL: https://github.com/xolox/python-rotate-backups
 
 """
@@ -23,14 +23,16 @@ import re
 
 # External dependencies.
 from dateutil.relativedelta import relativedelta
-from executor import execute
-from humanfriendly import format_path, parse_path, Timer
-from humanfriendly.text import concatenate, split
+from executor.contexts import create_context
+from humanfriendly import Timer, coerce_boolean, format_path, parse_path
+from humanfriendly.text import compact, concatenate, split
 from natsort import natsort
+from property_manager import PropertyManager, required_property
+from six import string_types
 from six.moves import configparser
 
 # Semi-standard module versioning.
-__version__ = '2.3'
+__version__ = '3.0'
 
 # Initialize a logger for this module.
 logger = logging.getLogger(__name__)
@@ -80,6 +82,33 @@ filenames.
 """
 
 
+def coerce_location(value, **options):
+    """
+    Coerce a string to a :class:`Location` object.
+
+    :param value: The value to coerce (a string or :class:`Location` object).
+    :param options: Any keyword arguments are passed on to
+                    :func:`~executor.contexts.create_context()`.
+    :returns: A :class:`Location` object.
+    """
+    if isinstance(value, Location):
+        # Location objects pass through untouched.
+        return value
+    else:
+        # Other values are expected to be strings.
+        if not isinstance(value, string_types):
+            msg = "Expected Location object or string, got %s instead!"
+            raise ValueError(msg % type(value))
+        # Try to parse a remote location.
+        ssh_alias, _, directory = value.partition(':')
+        if ssh_alias and directory and '/' not in ssh_alias:
+            options['ssh_alias'] = ssh_alias
+        else:
+            directory = value
+        return Location(context=create_context(**options),
+                        directory=parse_path(directory))
+
+
 def coerce_retention_period(value):
     """
     Coerce a retention period to a Python value.
@@ -103,11 +132,12 @@ def load_config_file(configuration_file=None):
 
     :param configuration_file: Override the pathname of the configuration file
                                to load (a string or :data:`None`).
-    :returns: A generator of tuples with three values each:
+    :returns: A generator of tuples with four values each:
 
-              1. The pathname of an existing directory (a string).
-              2. A dictionary with the configured rotation scheme.
-              3. A dictionary with additional options.
+              1. An execution context created using :mod:`executor.contexts`.
+              2. The pathname of a directory with backups (a string).
+              3. A dictionary with the rotation scheme.
+              4. A dictionary with additional options.
     :raises: :exc:`~exceptions.ValueError` when `configuration_file` is given
              but doesn't exist or can't be loaded.
 
@@ -131,16 +161,20 @@ def load_config_file(configuration_file=None):
                 logger.debug("Using configuration file %s ..", format_path(pathname))
                 break
     for section in parser.sections():
-        directory = parse_path(section)
-        if os.path.isdir(directory):
-            options = dict(parser.items(section))
-            yield (directory,
-                   dict((name, coerce_retention_period(options[name]))
-                        for name in SUPPORTED_FREQUENCIES
-                        if name in options),
-                   dict(include_list=split(options.get('include-list', '')),
-                        exclude_list=split(options.get('exclude-list', '')),
-                        io_scheduling_class=options.get('ionice')))
+        items = dict(parser.items(section))
+        context_options = {}
+        if coerce_boolean(items.get('use-sudo')):
+            context_options['sudo'] = True
+        if items.get('ssh-user'):
+            context_options['ssh_user'] = items['ssh-user']
+        location = coerce_location(section, **context_options)
+        rotation_scheme = dict((name, coerce_retention_period(items[name]))
+                               for name in SUPPORTED_FREQUENCIES
+                               if name in items)
+        options = dict(include_list=split(items.get('include-list', '')),
+                       exclude_list=split(items.get('exclude-list', '')),
+                       io_scheduling_class=items.get('ionice'))
+        yield location, rotation_scheme, options
 
 
 def rotate_backups(directory, rotation_scheme, include_list=None, exclude_list=None,
@@ -212,41 +246,46 @@ class RotateBackups(object):
         self.io_scheduling_class = io_scheduling_class
         self.config_file = config_file
 
-    def rotate_backups(self, directory, load_config=True):
+    def rotate_backups(self, location, load_config=True):
         """
         Rotate the backups in a directory according to a flexible rotation scheme.
 
-        :param directory: The pathname of a directory that contains backups to
-                          rotate (a string).
+        :param location: Any value accepted by :func:`coerce_location()`.
         :param load_config: If :data:`True` (so by default) the rotation scheme
                             and other options can be customized by the user in
                             a configuration file. In this case the caller's
                             arguments are only used when the configuration file
-                            doesn't define a configuration for the directory.
+                            doesn't define a configuration for the location.
+        :raises: :exc:`~exceptions.ValueError` when the given location doesn't
+                 exist, isn't readable or isn't writable. The third check is
+                 only performed when dry run isn't enabled.
 
-        .. note:: This function binds the main methods of the
-                  :class:`RotateBackups` class together to implement backup
-                  rotation with an easy to use Python API. If you're using
-                  `rotate-backups` as a Python API and the default behavior is
-                  not satisfactory, consider writing your own
-                  :func:`rotate_backups()` function based on the underlying
-                  :func:`collect_backups()`, :func:`group_backups()`,
-                  :func:`apply_rotation_scheme()` and
-                  :func:`find_preservation_criteria()` methods.
+        This function binds the main methods of the :class:`RotateBackups`
+        class together to implement backup rotation with an easy to use Python
+        API. If you're using `rotate-backups` as a Python API and the default
+        behavior is not satisfactory, consider writing your own
+        :func:`rotate_backups()` function based on the underlying
+        :func:`collect_backups()`, :func:`group_backups()`,
+        :func:`apply_rotation_scheme()` and
+        :func:`find_preservation_criteria()` methods.
         """
+        location = coerce_location(location)
         # Load configuration overrides by user?
         if load_config:
-            self.load_config_file(directory)
+            location = self.load_config_file(location)
         # Collect the backups in the given directory.
-        sorted_backups = self.collect_backups(directory)
+        sorted_backups = self.collect_backups(location)
         if not sorted_backups:
-            logger.info("No backups found in %s.", format_path(directory))
+            logger.info("No backups found in %s.", location)
             return
+        # Make sure the directory is writable.
+        if not self.dry_run:
+            location.ensure_writable()
         most_recent_backup = sorted_backups[-1]
         # Group the backups by the rotation frequencies.
         backups_by_frequency = self.group_backups(sorted_backups)
         # Apply the user defined rotation scheme.
-        self.apply_rotation_scheme(backups_by_frequency, most_recent_backup.datetime)
+        self.apply_rotation_scheme(backups_by_frequency, most_recent_backup.timestamp)
         # Find which backups to preserve and why.
         backups_to_preserve = self.find_preservation_criteria(backups_by_frequency)
         # Apply the calculated rotation scheme.
@@ -258,64 +297,67 @@ class RotateBackups(object):
                             concatenate(map(repr, matching_periods)),
                             "period" if len(matching_periods) == 1 else "periods")
             else:
-                logger.info("Deleting %s %s ..", backup.type, format_path(backup.pathname))
+                logger.info("Deleting %s ..", format_path(backup.pathname))
                 if not self.dry_run:
                     command = ['rm', '-Rf', backup.pathname]
                     if self.io_scheduling_class:
                         command = ['ionice', '--class', self.io_scheduling_class] + command
                     timer = Timer()
-                    execute(*command, logger=logger)
+                    location.context.execute(*command)
                     logger.debug("Deleted %s in %s.", format_path(backup.pathname), timer)
         if len(backups_to_preserve) == len(sorted_backups):
             logger.info("Nothing to do! (all backups preserved)")
 
-    def load_config_file(self, directory):
+    def load_config_file(self, location):
         """
         Load a rotation scheme and other options from a configuration file.
 
-        :param directory: The pathname of the directory to match (a string).
-        :param config_file: The pathname of a configuration file (a string or
-                            :data:`None`).
+        :param location: Any value accepted by :func:`coerce_location()`.
+        :returns: The configured or given :class:`Location` object.
         """
-        directory = os.path.realpath(directory)
-        for other_directory, rotation_scheme, options in load_config_file(self.config_file):
-            if directory == os.path.realpath(other_directory):
+        location = coerce_location(location)
+        for configured_location, rotation_scheme, options in load_config_file(self.config_file):
+            if location == configured_location:
+                logger.debug("Loading custom configuration for location (%s) ..", location)
                 if rotation_scheme:
                     self.rotation_scheme = rotation_scheme
                 for name, value in options.items():
                     if value:
                         setattr(self, name, value)
-                break
+                return configured_location
+        logger.debug("No configuration found for location (%s).", location)
+        return location
 
-    def collect_backups(self, directory):
+    def collect_backups(self, location):
         """
-        Collect the backups in the given directory.
+        Collect the backups at the given location.
 
-        :param directory: The pathname of an existing directory (a string).
+        :param location: Any value accepted by :func:`coerce_location()`.
         :returns: A sorted :class:`list` of :class:`Backup` objects (the
                   backups are sorted by their date).
+        :raises: :exc:`~exceptions.ValueError` when the given directory doesn't
+                 exist or isn't readable.
         """
         backups = []
-        directory = os.path.abspath(directory)
-        logger.info("Scanning directory for backups: %s", format_path(directory))
-        for entry in natsort(os.listdir(directory)):
-            # Check for a time stamp in the directory entry's name.
+        location = coerce_location(location)
+        logger.info("Scanning %s for backups ..", location)
+        location.ensure_readable()
+        for entry in natsort(location.context.list_entries(location.directory)):
             match = TIMESTAMP_PATTERN.search(entry)
             if match:
-                # Make sure the entry matches the given include/exclude patterns.
                 if self.exclude_list and any(fnmatch.fnmatch(entry, p) for p in self.exclude_list):
                     logger.debug("Excluded %r (it matched the exclude list).", entry)
                 elif self.include_list and not any(fnmatch.fnmatch(entry, p) for p in self.include_list):
                     logger.debug("Excluded %r (it didn't match the include list).", entry)
                 else:
                     backups.append(Backup(
-                        pathname=os.path.join(directory, entry),
-                        datetime=datetime.datetime(*(int(group, 10) for group in match.groups('0'))),
+                        pathname=os.path.join(location.directory, entry),
+                        timestamp=datetime.datetime(*(int(group, 10) for group in match.groups('0'))),
                     ))
             else:
                 logger.debug("Failed to match time stamp in filename: %s", entry)
         if backups:
-            logger.info("Found %i timestamped backups in %s.", len(backups), format_path(directory))
+            logger.info("Found %i timestamped backups in %s.", len(backups), location)
         return sorted(backups)
 
     def group_backups(self, backups):
@@ -375,7 +417,7 @@ class RotateBackups(object):
                     minimum_date = most_recent_backup - SUPPORTED_FREQUENCIES[frequency] * retention_period
                     for period, backups_in_period in list(backups.items()):
                         for backup in backups_in_period:
-                            if backup.datetime < minimum_date:
+                            if backup.timestamp < minimum_date:
                                 backups_in_period.remove(backup)
                         if not backups_in_period:
                             backups.pop(period)
@@ -403,60 +445,114 @@ class RotateBackups(object):
         return backups_to_preserve
 
 
+class Location(PropertyManager):
+
+    """:class:`Location` objects represent a root directory containing backups."""
+
+    @required_property
+    def context(self):
+        """An execution context created using :mod:`executor.contexts`."""
+
+    @required_property
+    def directory(self):
+        """The pathname of a directory containing backups (a string)."""
+
+    def ensure_exists(self):
+        """Make sure the location exists."""
+        if not self.context.is_directory(self.directory):
+            # This can also happen when we don't have permission to one of the
+            # parent directories so we'll point that out in the error message
+            # when it seems applicable (so as not to confuse users).
+            if self.context.have_superuser_privileges:
+                msg = "The directory %s doesn't exist!"
+                raise ValueError(msg % self)
+            else:
+                raise ValueError(compact("""
+                    The directory {location} isn't accessible, most likely
+                    because it doesn't exist or because of permissions. If
+                    you're sure the directory exists you can use the
+                    --use-sudo option.
+                """, location=self))
+
+    def ensure_readable(self):
+        """Make sure the location exists and is readable."""
+        self.ensure_exists()
+        if not self.context.is_readable(self.directory):
+            if self.context.have_superuser_privileges:
+                msg = "The directory %s isn't readable!"
+                raise ValueError(msg % self)
+            else:
+                raise ValueError(compact("""
+                    The directory {location} isn't readable, most likely
+                    because of permissions. Consider using the --use-sudo
+                    option.
+                """, location=self))
+
+    def ensure_writable(self):
+        """Make sure the directory exists and is writable."""
+        self.ensure_exists()
+        if not self.context.is_writable(self.directory):
+            if self.context.have_superuser_privileges:
+                msg = "The directory %s isn't writable!"
+                raise ValueError(msg % self)
+            else:
+                raise ValueError(compact("""
+                    The directory {location} isn't writable, most likely due
+                    to permissions. Consider using the --use-sudo option.
+                """, location=self))
+
+    def __str__(self):
+        """Render a simple human readable representation of a location."""
+        ssh_alias = getattr(self.context, 'ssh_alias', None)
+        return '%s:%s' % (ssh_alias, self.directory) if ssh_alias else self.directory
+
+    def __eq__(self, other):
+        """Check whether two locations point to the same host and directory."""
+        return isinstance(other, type(self)) and self._key() == other._key()
+
+    def _key(self):
+        ssh_alias = getattr(self.context, 'ssh_alias', None)
+        directory = os.path.normpath(self.directory)
+        return ssh_alias, directory
+
+
 @functools.total_ordering
-class Backup(object):
+class Backup(PropertyManager):
 
     """
-    :py:class:`Backup` objects represent a rotation subject.
+    :class:`Backup` objects represent a rotation subject.
 
-    In addition to the :attr:`type` and :attr:`week` properties :class:`Backup`
-    objects support all of the attributes of :py:class:`~datetime.datetime`
-    objects by deferring attribute access for unknown attributes to the
-    :py:class:`~datetime.datetime` object given to the constructor.
+    In addition to the :attr:`pathname`, :attr:`timestamp` and :attr:`week`
+    properties :class:`Backup` objects support all of the attributes of
+    :class:`~datetime.datetime` objects by deferring attribute access for
+    unknown attributes to :attr:`timestamp`.
     """
 
-    def __init__(self, pathname, datetime):
-        """
-        Initialize a :py:class:`Backup` object.
+    @required_property
+    def pathname(self):
+        """The pathname of the backup (a string)."""
 
-        :param pathname: The filename of the backup (a string).
-        :param datetime: The date/time when the backup was created (a
-                         :py:class:`~datetime.datetime` object).
-        """
-        self.pathname = pathname
-        self.datetime = datetime
-
-    @property
-    def type(self):
-        """Get a string describing the type of backup (e.g. file, directory)."""
-        if os.path.islink(self.pathname):
-            return 'symbolic link'
-        elif os.path.isdir(self.pathname):
-            return 'directory'
-        else:
-            return 'file'
+    @required_property
+    def timestamp(self):
+        """The date and time when the backup was created (a :class:`~datetime.datetime` object)."""
 
     @property
     def week(self):
-        """Get the ISO week number."""
-        return self.datetime.isocalendar()[1]
+        """The ISO week number of :attr:`timestamp` (a number)."""
+        return self.timestamp.isocalendar()[1]
 
     def __getattr__(self, name):
-        """Defer attribute access to the datetime object."""
-        return getattr(self.datetime, name)
-
-    def __repr__(self):
-        """Enable pretty printing of :py:class:`Backup` objects."""
-        return "Backup(pathname=%r, datetime=%r)" % (self.pathname, self.datetime)
+        """Defer attribute access to :attr:`timestamp`."""
+        return getattr(self.timestamp, name)
 
     def __hash__(self):
-        """Make it possible to use :py:class:`Backup` objects in sets and as dictionary keys."""
+        """Make it possible to use :class:`Backup` objects in sets and as dictionary keys."""
         return hash(self.pathname)
 
     def __eq__(self, other):
-        """Make it possible to use :py:class:`Backup` objects in sets and as dictionary keys."""
-        return type(self) == type(other) and self.datetime == other.datetime
+        """Make it possible to use :class:`Backup` objects in sets and as dictionary keys."""
+        return isinstance(other, type(self)) and self.timestamp == other.timestamp
 
     def __lt__(self, other):
         """Enable proper sorting of backups."""
-        return self.datetime < other.datetime
+        return self.timestamp < other.timestamp

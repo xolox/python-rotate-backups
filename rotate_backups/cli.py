@@ -1,17 +1,22 @@
 # rotate-backups: Simple command line interface for backup rotation.
 #
 # Author: Peter Odding <peter@peterodding.com>
-# Last Change: March 21, 2016
+# Last Change: April 13, 2016
 # URL: https://github.com/xolox/python-rotate-backups
 
 """
-Usage: rotate-backups [OPTIONS] DIRECTORY..
+Usage: rotate-backups [OPTIONS] [DIRECTORY, ..]
 
-Easy rotation of backups based on the Python package by the same name. To use
-this program you specify a rotation scheme via (a combination of) the --hourly,
---daily, --weekly, --monthly and/or --yearly options and specify the directory
-(or multiple directories) containing backups to rotate as one or more
+Easy rotation of backups based on the Python package by the same name.
+
+To use this program you specify a rotation scheme via (a combination of) the
+--hourly, --daily, --weekly, --monthly and/or --yearly options and the
+directory (or directories) containing backups to rotate as one or more
 positional arguments.
+
+You can rotate backups on a remote system over SSH by prefixing a DIRECTORY
+with an SSH alias and separating the two with a colon (similar to how rsync
+accepts remote locations).
 
 Instead of specifying directories and a rotation scheme on the command line you
 can also add them to a configuration file. For more details refer to the online
@@ -80,6 +85,12 @@ Supported options:
     `/etc/rotate-backups.ini'. The first of these two configuration files to
     exist is loaded. For more details refer to the online documentation.
 
+  -u, --use-sudo
+
+    Enable the use of `sudo' to rotate backups in directories that are not
+    readable and/or writable for the current user (or the user logged in to a
+    remote system over SSH).
+
   -n, --dry-run
 
     Don't make any changes, just print what would be done. This makes it easy
@@ -101,7 +112,6 @@ Supported options:
 # Standard library modules.
 import getopt
 import logging
-import os
 import sys
 
 # External dependencies.
@@ -110,7 +120,12 @@ from humanfriendly import concatenate, parse_path
 from humanfriendly.terminal import usage
 
 # Modules included in our package.
-from rotate_backups import coerce_retention_period, load_config_file, RotateBackups
+from rotate_backups import (
+    RotateBackups,
+    coerce_location,
+    coerce_retention_period,
+    load_config_file,
+)
 
 # Initialize a logger.
 logger = logging.getLogger(__name__)
@@ -126,12 +141,15 @@ def main():
     include_list = []
     io_scheduling_class = None
     rotation_scheme = {}
+    use_sudo = False
+    # Internal state.
+    selected_locations = []
     # Parse the command line arguments.
     try:
-        options, arguments = getopt.getopt(sys.argv[1:], 'H:d:w:m:y:I:x:i:c:nvqh', [
+        options, arguments = getopt.getopt(sys.argv[1:], 'H:d:w:m:y:I:x:i:c:r:unvqh', [
             'hourly=', 'daily=', 'weekly=', 'monthly=', 'yearly=', 'include=',
-            'exclude=', 'ionice=', 'config=', 'dry-run', 'verbose', 'quiet',
-            'help',
+            'exclude=', 'ionice=', 'config=', 'remote-host=', 'use-sudo',
+            'dry-run', 'verbose', 'quiet', 'help',
         ])
         for option, value in options:
             if option in ('-H', '--hourly'):
@@ -157,6 +175,8 @@ def main():
                 io_scheduling_class = value
             elif option in ('-c', '--config'):
                 config_file = parse_path(value)
+            elif option in ('-u', '--use-sudo'):
+                use_sudo = True
             elif option in ('-n', '--dry-run'):
                 logger.info("Performing a dry run (because of %s option) ..", option)
                 dry_run = True
@@ -171,24 +191,21 @@ def main():
                 assert False, "Unhandled option! (programming error)"
         if rotation_scheme:
             logger.debug("Parsed rotation scheme: %s", rotation_scheme)
-        # Make sure all of the directories given as arguments exist.
-        for pathname in arguments:
-            if not os.path.isdir(pathname):
-                msg = "Directory doesn't exist! (%s)"
-                raise Exception(msg % pathname)
-        # If no arguments are given but the system has a configuration file
-        # then the backups in the configured directories are rotated.
-        if not arguments:
-            arguments.extend(directory for directory, _, _ in load_config_file(config_file))
+        if arguments:
+            # Rotation of the locations given on the command line.
+            selected_locations.extend(coerce_location(value, sudo=use_sudo) for value in arguments)
+        else:
+            # Rotation of all configured locations.
+            selected_locations.extend(location for location, rotation_scheme, options in load_config_file(config_file))
         # Show the usage message when no directories are given nor configured.
-        if not arguments:
+        if not selected_locations:
             usage(__doc__)
             return
     except Exception as e:
         logger.error("%s", e)
         sys.exit(1)
-    # Rotate the backups in the given or configured directories.
-    for pathname in arguments:
+    # Rotate the backups in the selected directories.
+    for location in selected_locations:
         RotateBackups(
             rotation_scheme=rotation_scheme,
             include_list=include_list,
@@ -196,4 +213,4 @@ def main():
             io_scheduling_class=io_scheduling_class,
             dry_run=dry_run,
             config_file=config_file,
-        ).rotate_backups(pathname)
+        ).rotate_backups(location)

@@ -101,9 +101,13 @@ Command line
 .. inject_usage('rotate_backups.cli')
 .. ]]]
 
-**Usage:** `rotate-backups [OPTIONS] DIRECTORY..`
+**Usage:** `rotate-backups [OPTIONS] [DIRECTORY, ..]`
 
-Easy rotation of backups based on the Python package by the same name. To use this program you specify a rotation scheme via (a combination of) the ``--hourly``, ``--daily``, ``--weekly``, ``--monthly`` and/or ``--yearly`` options and specify the directory (or multiple directories) containing backups to rotate as one or more positional arguments.
+Easy rotation of backups based on the Python package by the same name.
+
+To use this program you specify a rotation scheme via (a combination of) the ``--hourly``, ``--daily``, ``--weekly``, ``--monthly`` and/or ``--yearly`` options and the directory (or directories) containing backups to rotate as one or more positional arguments.
+
+You can rotate backups on a remote system over SSH by prefixing a DIRECTORY with an SSH alias and separating the two with a colon (similar to how rsync accepts remote locations).
 
 Instead of specifying directories and a rotation scheme on the command line you can also add them to a configuration file. For more details refer to the online documentation (see also the ``--config`` option).
 
@@ -145,6 +149,9 @@ Please use the ``--dry-run`` option to test the effect of the specified rotation
    given two default locations are checked: ""~/.rotate-backups.ini"" and
    ""/etc/rotate-backups.ini"". The first of these two configuration files to
    exist is loaded. For more details refer to the online documentation."
+   "``-u``, ``--use-sudo``","Enable the use of ""sudo"" to rotate backups in directories that are not
+   readable and/or writable for the current user (or the user logged in to a
+   remote system over SSH)."
    "``-n``, ``--dry-run``","Don't make any changes, just print what would be done. This makes it easy
    to evaluate the impact of a rotation scheme without losing any backups."
    "``-v``, ``--verbose``",Make more noise (increase logging verbosity).
@@ -204,6 +211,33 @@ make regular backups of:
    weekly = 4
    monthly = 2
    ionice = idle
+
+Here's an example of a configuration for two remote directories:
+
+.. code-block:: ini
+
+   # SSH as a regular user and use `sudo' to elevate privileges.
+   [server:/backups/laptop]
+   use-sudo = yes
+   hourly = 24
+   daily = 7
+   weekly = 4
+   monthly = 12
+   yearly = always
+   ionice = idle
+
+   # SSH as the root user (avoids sudo passwords).
+   [server:/backups/server]
+   ssh-user = root
+   hourly = 24
+   daily = 7
+   weekly = 4
+   monthly = 12
+   yearly = always
+   ionice = idle
+
+As this example shows you have the option to connect as the root user or to
+connect as a regular user and use ``sudo`` to elevate privileges.
 
 Contact
 -------
