@@ -141,6 +141,28 @@ Please use the ``--dry-run`` option to test the effect of the specified rotation
    "``-x``, ``--exclude=PATTERN``","Don't process backups that match the shell pattern given by ``PATTERN``. This
    argument can be repeated. Make sure to quote ``PATTERN`` so the shell doesn't
    expand the pattern before it's received by rotate-backups."
+   "``-r``, ``--relaxed``","By default the time window for each rotation scheme is enforced (this is
+   referred to as strict rotation) but the ``-r``, ``--relaxed`` option can be used
+   to alter this behavior. The easiest way to explain the difference between
+   strict and relaxed rotation is using an example:
+   
+   - When using strict rotation and the number of hourly backups to preserve
+     is three, only backups created in the relevant time window (the hour of
+     the most recent backup and the two hours leading up to that) will match
+     the hourly frequency.
+   
+   - When using relaxed rotation the three most recent backups will all match
+     the hourly frequency (and thus be preserved), regardless of the
+     calculated time window.
+   
+   If the explanation above is not clear enough, here's a simple way to decide
+   whether you want to customize this behavior or not:
+   
+   - If your backups are created at regular intervals and you never miss an
+     interval then strict rotation (the default) is probably the best choice.
+   
+   - If your backups are created at irregular intervals then you may want to
+     use the ``-r``, ``--relaxed`` option in order to preserve more backups."
    "``-i``, ``--ionice=CLASS``","Use the ""ionice"" program to set the I/O scheduling class and priority of
    the ""rm"" invocations used to remove backups. ``CLASS`` is expected to be one of
    the values ""idle"", ""best-effort"" or ""realtime"". Refer to the man page of

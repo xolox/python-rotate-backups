@@ -71,6 +71,31 @@ Supported options:
     argument can be repeated. Make sure to quote PATTERN so the shell doesn't
     expand the pattern before it's received by rotate-backups.
 
+  -r, --relaxed
+
+    By default the time window for each rotation scheme is enforced (this is
+    referred to as strict rotation) but the -r, --relaxed option can be used
+    to alter this behavior. The easiest way to explain the difference between
+    strict and relaxed rotation is using an example:
+
+    - When using strict rotation and the number of hourly backups to preserve
+      is three, only backups created in the relevant time window (the hour of
+      the most recent backup and the two hours leading up to that) will match
+      the hourly frequency.
+
+    - When using relaxed rotation the three most recent backups will all match
+      the hourly frequency (and thus be preserved), regardless of the
+      calculated time window.
+
+    If the explanation above is not clear enough, here's a simple way to decide
+    whether you want to customize this behavior or not:
+
+    - If your backups are created at regular intervals and you never miss an
+      interval then strict rotation (the default) is probably the best choice.
+
+    - If your backups are created at irregular intervals then you may want to
+      use the -r, --relaxed option in order to preserve more backups.
+
   -i, --ionice=CLASS
 
     Use the `ionice' program to set the I/O scheduling class and priority of
@@ -142,14 +167,15 @@ def main():
     io_scheduling_class = None
     rotation_scheme = {}
     use_sudo = False
+    strict = True
     # Internal state.
     selected_locations = []
     # Parse the command line arguments.
     try:
-        options, arguments = getopt.getopt(sys.argv[1:], 'H:d:w:m:y:I:x:i:c:r:unvqh', [
+        options, arguments = getopt.getopt(sys.argv[1:], 'H:d:w:m:y:I:x:ri:c:r:unvqh', [
             'hourly=', 'daily=', 'weekly=', 'monthly=', 'yearly=', 'include=',
-            'exclude=', 'ionice=', 'config=', 'remote-host=', 'use-sudo',
-            'dry-run', 'verbose', 'quiet', 'help',
+            'exclude=', 'relaxed', 'ionice=', 'config=', 'use-sudo', 'dry-run',
+            'verbose', 'quiet', 'help',
         ])
         for option, value in options:
             if option in ('-H', '--hourly'):
@@ -166,6 +192,8 @@ def main():
                 include_list.append(value)
             elif option in ('-x', '--exclude'):
                 exclude_list.append(value)
+            elif option in ('-r', '--relaxed'):
+                strict = False
             elif option in ('-i', '--ionice'):
                 value = value.lower().strip()
                 expected = ('idle', 'best-effort', 'realtime')
@@ -213,4 +241,5 @@ def main():
             io_scheduling_class=io_scheduling_class,
             dry_run=dry_run,
             config_file=config_file,
+            strict=strict,
         ).rotate_backups(location)

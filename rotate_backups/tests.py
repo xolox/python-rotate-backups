@@ -258,6 +258,28 @@ class RotateBackupsTestCase(unittest.TestCase):
             backups_that_were_preserved = set(os.listdir(root))
             assert backups_that_were_preserved == expected_to_be_preserved
 
+    def test_strict_rotation(self):
+        """Test strict rotation."""
+        with TemporaryDirectory(prefix='rotate-backups-', suffix='-test-suite') as root:
+            os.mkdir(os.path.join(root, 'galera_backup_db4.sl.example.lab_2016-03-17_10-00'))
+            os.mkdir(os.path.join(root, 'galera_backup_db4.sl.example.lab_2016-03-17_12-00'))
+            os.mkdir(os.path.join(root, 'galera_backup_db4.sl.example.lab_2016-03-17_16-00'))
+            run_cli('--hourly=3', '--daily=1', root)
+            assert os.path.exists(os.path.join(root, 'galera_backup_db4.sl.example.lab_2016-03-17_10-00'))
+            assert os.path.exists(os.path.join(root, 'galera_backup_db4.sl.example.lab_2016-03-17_12-00')) is False
+            assert os.path.exists(os.path.join(root, 'galera_backup_db4.sl.example.lab_2016-03-17_16-00'))
+
+    def test_relaxed_rotation(self):
+        """Test relaxed rotation."""
+        with TemporaryDirectory(prefix='rotate-backups-', suffix='-test-suite') as root:
+            os.mkdir(os.path.join(root, 'galera_backup_db4.sl.example.lab_2016-03-17_10-00'))
+            os.mkdir(os.path.join(root, 'galera_backup_db4.sl.example.lab_2016-03-17_12-00'))
+            os.mkdir(os.path.join(root, 'galera_backup_db4.sl.example.lab_2016-03-17_16-00'))
+            run_cli('--hourly=3', '--daily=1', '--relaxed', root)
+            assert os.path.exists(os.path.join(root, 'galera_backup_db4.sl.example.lab_2016-03-17_10-00'))
+            assert os.path.exists(os.path.join(root, 'galera_backup_db4.sl.example.lab_2016-03-17_12-00'))
+            assert os.path.exists(os.path.join(root, 'galera_backup_db4.sl.example.lab_2016-03-17_16-00'))
+
     def create_sample_backup_set(self, root):
         """Create a sample backup set to be rotated."""
         for name in SAMPLE_BACKUP_SET:

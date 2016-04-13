@@ -32,7 +32,7 @@ from six import string_types
 from six.moves import configparser
 
 # Semi-standard module versioning.
-__version__ = '3.0'
+__version__ = '3.1'
 
 # Initialize a logger for this module.
 logger = logging.getLogger(__name__)
@@ -173,7 +173,8 @@ def load_config_file(configuration_file=None):
                                if name in items)
         options = dict(include_list=split(items.get('include-list', '')),
                        exclude_list=split(items.get('exclude-list', '')),
-                       io_scheduling_class=items.get('ionice'))
+                       io_scheduling_class=items.get('ionice'),
+                       strict=coerce_boolean(items.get('strict', 'yes')))
         yield location, rotation_scheme, options
 
 
@@ -203,7 +204,8 @@ class RotateBackups(object):
     """Python API for the ``rotate-backups`` program."""
 
     def __init__(self, rotation_scheme, include_list=None, exclude_list=None,
-                 dry_run=False, io_scheduling_class=None, config_file=None):
+                 dry_run=False, io_scheduling_class=None, config_file=None,
+                 strict=True):
         """
         Construct a :class:`RotateBackups` object.
 
@@ -229,15 +231,43 @@ class RotateBackups(object):
                              backup matches the exclude list it will be ignored,
                              *even if it also matched the include list* (it's the
                              only logical way to combine both lists).
-        :param dry_run: If this is ``True`` then no changes will be made, which
+        :param dry_run: If this is :data:`True` then no changes will be made, which
                         provides a 'preview' of the effect of the rotation scheme
-                        (the default is ``False``). Right now this is only useful
+                        (the default is :data:`False`). Right now this is only useful
                         in the command line interface because there's no return
                         value.
         :param io_scheduling_class: Use ``ionice`` to set the I/O scheduling class
                                     (expected to be one of the strings 'idle',
                                     'best-effort' or 'realtime').
         :param config_file: The pathname of a configuration file (a string).
+        :param strict: Whether to enforce the time window for each rotation
+                       frequency (a boolean, defaults to :data:`True`). The
+                       easiest way to explain the difference between strict
+                       and relaxed rotation is using an example:
+
+                       - If `strict` is :data:`True` and the number of hourly
+                         backups to preserve is three, only backups created in
+                         the relevant time window (the hour of the most recent
+                         backup and the two hours leading up to that) will
+                         match the hourly frequency.
+
+                       - If `strict` is :data:`False` then the three most
+                         recent backups will all match the hourly frequency
+                         (and thus be preserved), regardless of the calculated
+                         time window.
+
+                       If the explanation above is not clear enough, here's a
+                       simple way to decide whether you want to customize this
+                       behavior:
+
+                       - If your backups are created at regular intervals and
+                         you never miss an interval then the default
+                         (:data:`True`) is most likely fine.
+
+                       - If your backups are created at irregular intervals
+                         then you may want to set `strict` to :data:`False` to
+                         convince :class:`RotateBackups` to preserve more
+                         backups.
         """
         self.rotation_scheme = rotation_scheme
         self.include_list = include_list
@@ -245,6 +275,7 @@ class RotateBackups(object):
         self.dry_run = dry_run
         self.io_scheduling_class = io_scheduling_class
         self.config_file = config_file
+        self.strict = strict
 
     def rotate_backups(self, location, load_config=True):
         """
@@ -413,14 +444,15 @@ class RotateBackups(object):
                 retention_period = self.rotation_scheme[frequency]
                 if retention_period != 'always':
                     # Remove backups created before the minimum date of this
-                    # rotation frequency (relative to the most recent backup).
-                    minimum_date = most_recent_backup - SUPPORTED_FREQUENCIES[frequency] * retention_period
-                    for period, backups_in_period in list(backups.items()):
-                        for backup in backups_in_period:
-                            if backup.timestamp < minimum_date:
-                                backups_in_period.remove(backup)
-                        if not backups_in_period:
-                            backups.pop(period)
+                    # rotation frequency? (relative to the most recent backup)
+                    if self.strict:
+                        minimum_date = most_recent_backup - SUPPORTED_FREQUENCIES[frequency] * retention_period
+                        for period, backups_in_period in list(backups.items()):
+                            for backup in backups_in_period:
+                                if backup.timestamp < minimum_date:
+                                    backups_in_period.remove(backup)
+                            if not backups_in_period:
+                                backups.pop(period)
                     # If there are more periods remaining than the user
                     # requested to be preserved we delete the oldest one(s).
                     items_to_preserve = sorted(backups.items())[-retention_period:]
