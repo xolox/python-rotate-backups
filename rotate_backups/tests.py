@@ -19,7 +19,11 @@ import coloredlogs
 from six.moves import configparser
 
 # The module we're testing.
-from rotate_backups import load_config_file, RotateBackups
+from rotate_backups import (
+    RotateBackups,
+    coerce_location,
+    load_config_file,
+)
 from rotate_backups.cli import main
 
 # Initialize a logger for this module.
@@ -97,6 +101,8 @@ class RotateBackupsTestCase(unittest.TestCase):
         assert run_cli('--ionice=unsupported-class') != 0
         # Test that an invalid rotation scheme causes an error to be reported.
         assert run_cli('--hourly=not-a-number') != 0
+        # Test that invalid location values are properly reported.
+        self.assertRaises(ValueError, lambda: coerce_location(['not', 'a', 'string']))
         # Argument validation tests that require an empty directory.
         with TemporaryDirectory(prefix='rotate-backups-', suffix='-test-suite') as root:
             # Test that non-existing directories cause an error to be reported.
@@ -107,6 +113,12 @@ class RotateBackupsTestCase(unittest.TestCase):
             # Test that an empty rotation scheme raises an exception.
             self.create_sample_backup_set(root)
             self.assertRaises(ValueError, lambda: RotateBackups(rotation_scheme={}).rotate_backups(root))
+        # Argument validation tests that assume the current user isn't root.
+        if os.getuid() != 0:
+            # I'm being lazy and will assume that this test suite will only be
+            # run on systems where users other than root do not have access to
+            # /root.
+            self.assertRaises(ValueError, lambda: run_cli('-n', '/root'))
 
     def test_dry_run(self):
         """Make sure dry run doesn't remove any backups."""
