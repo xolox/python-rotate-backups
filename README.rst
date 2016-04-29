@@ -174,6 +174,7 @@ Please use the ``--dry-run`` option to test the effect of the specified rotation
    "``-u``, ``--use-sudo``","Enable the use of ""sudo"" to rotate backups in directories that are not
    readable and/or writable for the current user (or the user logged in to a
    remote system over SSH)."
+   "``-R``, ``--recursive``",Also search subdirectories for backup files.
    "``-n``, ``--dry-run``","Don't make any changes, just print what would be done. This makes it easy
    to evaluate the impact of a rotation scheme without losing any backups."
    "``-v``, ``--verbose``",Make more noise (increase logging verbosity).

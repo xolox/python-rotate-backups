@@ -61,15 +61,16 @@ Supported options:
 
   -I, --include=PATTERN
 
-    Only process backups that match the shell pattern given by PATTERN. This
-    argument can be repeated. Make sure to quote PATTERN so the shell doesn't
-    expand the pattern before it's received by rotate-backups.
+    Only process backup with file names that match the shell pattern given by
+    PATTERN. This argument can be repeated. Make sure to quote PATTERN so the
+    shell doesn't expand the pattern before it's received by rotate-backups.
 
   -x, --exclude=PATTERN
 
-    Don't process backups that match the shell pattern given by PATTERN. This
-    argument can be repeated. Make sure to quote PATTERN so the shell doesn't
-    expand the pattern before it's received by rotate-backups.
+    Don't process backups with file names that match the shell pattern given
+    by PATTERN. This argument can be repeated. Make sure to quote PATTERN so
+    the shell doesn't expand the pattern before it's received by
+    rotate-backups.
 
   -r, --relaxed
 
@@ -115,6 +116,10 @@ Supported options:
     Enable the use of `sudo' to rotate backups in directories that are not
     readable and/or writable for the current user (or the user logged in to a
     remote system over SSH).
+
+  -R, --recursive
+
+    Also search subdirectories for backup files.
 
   -n, --dry-run
 
@@ -168,14 +173,15 @@ def main():
     rotation_scheme = {}
     use_sudo = False
     strict = True
+    recursive = False
     # Internal state.
     selected_locations = []
     # Parse the command line arguments.
     try:
-        options, arguments = getopt.getopt(sys.argv[1:], 'H:d:w:m:y:I:x:ri:c:r:unvqh', [
+        options, arguments = getopt.getopt(sys.argv[1:], 'H:d:w:m:y:I:x:ri:c:r:uRnvqh', [
             'hourly=', 'daily=', 'weekly=', 'monthly=', 'yearly=', 'include=',
-            'exclude=', 'relaxed', 'ionice=', 'config=', 'use-sudo', 'dry-run',
-            'verbose', 'quiet', 'help',
+            'exclude=', 'relaxed', 'ionice=', 'config=', 'use-sudo', 'recursive',
+            'dry-run', 'verbose', 'quiet', 'help',
         ])
         for option, value in options:
             if option in ('-H', '--hourly'):
@@ -205,6 +211,8 @@ def main():
                 config_file = parse_path(value)
             elif option in ('-u', '--use-sudo'):
                 use_sudo = True
+            elif option in ('-R', '--recursive'):
+                recursive = True
             elif option in ('-n', '--dry-run'):
                 logger.info("Performing a dry run (because of %s option) ..", option)
                 dry_run = True
@@ -242,4 +250,5 @@ def main():
             dry_run=dry_run,
             config_file=config_file,
             strict=strict,
+            recursive=recursive
         ).rotate_backups(location)
