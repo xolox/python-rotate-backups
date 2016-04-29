@@ -174,7 +174,8 @@ def load_config_file(configuration_file=None):
         options = dict(include_list=split(items.get('include-list', '')),
                        exclude_list=split(items.get('exclude-list', '')),
                        io_scheduling_class=items.get('ionice'),
-                       strict=coerce_boolean(items.get('strict', 'yes')))
+                       strict=coerce_boolean(items.get('strict', 'yes')),
+                       recursive=coerce_boolean(items.get('recursive', 'no')))
         yield location, rotation_scheme, options
 
 
@@ -205,7 +206,7 @@ class RotateBackups(object):
 
     def __init__(self, rotation_scheme, include_list=None, exclude_list=None,
                  dry_run=False, io_scheduling_class=None, config_file=None,
-                 strict=True):
+                 strict=True, recursive=False):
         """
         Construct a :class:`RotateBackups` object.
 
@@ -268,6 +269,7 @@ class RotateBackups(object):
                          then you may want to set `strict` to :data:`False` to
                          convince :class:`RotateBackups` to preserve more
                          backups.
+        :param recursive: Whether to look for backup files in subdirectories.
         """
         self.rotation_scheme = rotation_scheme
         self.include_list = include_list
@@ -276,6 +278,7 @@ class RotateBackups(object):
         self.io_scheduling_class = io_scheduling_class
         self.config_file = config_file
         self.strict = strict
+        self.recursive = recursive
 
     def rotate_backups(self, location, load_config=True):
         """
@@ -373,20 +376,21 @@ class RotateBackups(object):
         location = coerce_location(location)
         logger.info("Scanning %s for backups ..", location)
         location.ensure_readable()
-        for entry in natsort(location.context.list_entries(location.directory)):
-            match = TIMESTAMP_PATTERN.search(entry)
+        for file_path in natsort(location.list_files(recursive=self.recursive)):
+            file_name = os.path.basename(file_path)
+            match = TIMESTAMP_PATTERN.search(file_name)
             if match:
-                if self.exclude_list and any(fnmatch.fnmatch(entry, p) for p in self.exclude_list):
-                    logger.debug("Excluded %r (it matched the exclude list).", entry)
-                elif self.include_list and not any(fnmatch.fnmatch(entry, p) for p in self.include_list):
-                    logger.debug("Excluded %r (it didn't match the include list).", entry)
+                if self.exclude_list and any(fnmatch.fnmatch(file_name, p) for p in self.exclude_list):
+                    logger.debug("Excluded %r (it matched the exclude list).", file_path)
+                elif self.include_list and not any(fnmatch.fnmatch(file_name, p) for p in self.include_list):
+                    logger.debug("Excluded %r (it didn't match the include list).", file_path)
                 else:
                     backups.append(Backup(
-                        pathname=os.path.join(location.directory, entry),
+                        pathname=file_path,
                         timestamp=datetime.datetime(*(int(group, 10) for group in match.groups('0'))),
                     ))
             else:
-                logger.debug("Failed to match time stamp in filename: %s", entry)
+                logger.debug("Failed to match time stamp in filename: %s", file_path)
         if backups:
             logger.info("Found %i timestamped backups in %s.", len(backups), location)
         return sorted(backups)
@@ -532,6 +536,14 @@ class Location(PropertyManager):
                     The directory {location} isn't writable, most likely due
                     to permissions. Consider using the --use-sudo option.
                 """, location=self))
+
+    def list_files(self, recursive=False):
+        """Returns a list of files in this directory."""
+        cmd = ['find', self.directory, '-mindepth', '1', ]
+        if not recursive:
+            cmd.extend(['-maxdepth', '1'])
+        cmd.extend(['-type', 'f', '-print0'])
+        return self.context.capture(*cmd).split('\0')
 
     def __str__(self):
         """Render a simple human readable representation of a location."""
