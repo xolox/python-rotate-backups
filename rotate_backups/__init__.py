@@ -26,14 +26,14 @@ from executor.contexts import create_context
 from humanfriendly import Timer, coerce_boolean, format_path, parse_path
 from humanfriendly.text import compact, concatenate, split
 from natsort import natsort
-from property_manager import PropertyManager, key_property, required_property
+from property_manager import PropertyManager, lazy_property, key_property, required_property
 from simpleeval import simple_eval
 from six import string_types
 from six.moves import configparser
 from verboselogs import VerboseLogger
 
 # Semi-standard module versioning.
-__version__ = '3.4'
+__version__ = '3.5'
 
 # Initialize a logger for this module.
 logger = VerboseLogger(__name__)
@@ -503,6 +503,23 @@ class Location(PropertyManager):
     def directory(self):
         """The pathname of a directory containing backups (a string)."""
 
+    @lazy_property
+    def ssh_alias(self):
+        """The SSH alias of a remote location (a string or :data:`None`)."""
+        return getattr(self.context, 'ssh_alias', None)
+
+    @property
+    def key_properties(self):
+        """
+        A list of strings with the names of the :attr:`~custom_property.key` properties.
+
+        Overrides :attr:`~property_manager.PropertyManager.key_properties` to
+        customize the ordering of :class:`Location` objects so that they are
+        ordered first by their :attr:`ssh_alias` and second by their
+        :attr:`directory`.
+        """
+        return ['ssh_alias', 'directory'] if self.ssh_alias else ['directory']
+
     def ensure_exists(self):
         """Make sure the location exists."""
         if not self.context.is_directory(self.directory):
@@ -549,17 +566,7 @@ class Location(PropertyManager):
 
     def __str__(self):
         """Render a simple human readable representation of a location."""
-        ssh_alias = getattr(self.context, 'ssh_alias', None)
-        return '%s:%s' % (ssh_alias, self.directory) if ssh_alias else self.directory
-
-    def __eq__(self, other):
-        """Check whether two locations point to the same host and directory."""
-        return isinstance(other, type(self)) and self._key() == other._key()
-
-    def _key(self):
-        ssh_alias = getattr(self.context, 'ssh_alias', None)
-        directory = os.path.normpath(self.directory)
-        return ssh_alias, directory
+        return '%s:%s' % (self.ssh_alias, self.directory) if self.ssh_alias else self.directory
 
 
 class Backup(PropertyManager):
