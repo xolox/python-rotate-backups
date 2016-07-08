@@ -1,7 +1,7 @@
 # Test suite for the `rotate-backups' Python package.
 #
 # Author: Peter Odding <peter@peterodding.com>
-# Last Change: July 8, 2016
+# Last Change: July 9, 2016
 # URL: https://github.com/xolox/python-rotate-backups
 
 """Test suite for the `rotate-backups` package."""
@@ -16,6 +16,7 @@ import unittest
 
 # External dependencies.
 import coloredlogs
+from executor.contexts import RemoteContext
 from six.moves import configparser
 
 # The module we're testing.
@@ -98,11 +99,26 @@ class RotateBackupsTestCase(unittest.TestCase):
 
     def test_retention_period_coercion(self):
         """Test coercion of retention period expressions."""
+        # Test that invalid values are refused.
+        self.assertRaises(ValueError, coerce_retention_period, ['not', 'a', 'string'])
+        # Test that invalid evaluation results are refused.
+        self.assertRaises(ValueError, coerce_retention_period, 'None')
+        # Check that the string `always' makes it through alive :-).
         assert coerce_retention_period('always') == 'always'
         assert coerce_retention_period('Always') == 'always'
+        # Check that anything else properly evaluates to a number.
         assert coerce_retention_period(42) == 42
         assert coerce_retention_period('42') == 42
         assert coerce_retention_period('21 * 2') == 42
+
+    def test_location_coercion(self):
+        """Test coercion of locations."""
+        # Test that invalid values are refused.
+        self.assertRaises(ValueError, lambda: coerce_location(['not', 'a', 'string']))
+        # Test that remote locations are properly parsed.
+        location = coerce_location('some-host:/some/directory')
+        assert isinstance(location.context, RemoteContext)
+        assert location.directory == '/some/directory'
 
     def test_argument_validation(self):
         """Test argument validation."""
@@ -110,8 +126,6 @@ class RotateBackupsTestCase(unittest.TestCase):
         assert run_cli('--ionice=unsupported-class') != 0
         # Test that an invalid rotation scheme causes an error to be reported.
         assert run_cli('--hourly=not-a-number') != 0
-        # Test that invalid location values are properly reported.
-        self.assertRaises(ValueError, lambda: coerce_location(['not', 'a', 'string']))
         # Argument validation tests that require an empty directory.
         with TemporaryDirectory(prefix='rotate-backups-', suffix='-test-suite') as root:
             # Test that non-existing directories cause an error to be reported.
