@@ -1,7 +1,7 @@
 # rotate-backups: Simple command line interface for backup rotation.
 #
 # Author: Peter Odding <peter@peterodding.com>
-# Last Change: April 13, 2016
+# Last Change: July 8, 2016
 # URL: https://github.com/xolox/python-rotate-backups
 
 """
@@ -16,7 +16,6 @@ The :mod:`rotate_backups` module contains the Python API of the
 import collections
 import datetime
 import fnmatch
-import functools
 import logging
 import os
 import re
@@ -27,12 +26,12 @@ from executor.contexts import create_context
 from humanfriendly import Timer, coerce_boolean, format_path, parse_path
 from humanfriendly.text import compact, concatenate, split
 from natsort import natsort
-from property_manager import PropertyManager, required_property
+from property_manager import PropertyManager, key_property, required_property
 from six import string_types
 from six.moves import configparser
 
 # Semi-standard module versioning.
-__version__ = '3.1'
+__version__ = '3.2'
 
 # Initialize a logger for this module.
 logger = logging.getLogger(__name__)
@@ -548,7 +547,6 @@ class Location(PropertyManager):
         return ssh_alias, directory
 
 
-@functools.total_ordering
 class Backup(PropertyManager):
 
     """
@@ -560,11 +558,20 @@ class Backup(PropertyManager):
     unknown attributes to :attr:`timestamp`.
     """
 
-    @required_property
+    key_properties = 'timestamp', 'pathname'
+    """
+    Customize the ordering of :class:`Backup` objects.
+
+    :class:`Backup` objects are ordered first by their :attr:`timestamp` and
+    second by their :attr:`pathname`. This class variable overrides
+    :attr:`~property_manager.PropertyManager.key_properties`.
+    """
+
+    @key_property
     def pathname(self):
         """The pathname of the backup (a string)."""
 
-    @required_property
+    @key_property
     def timestamp(self):
         """The date and time when the backup was created (a :class:`~datetime.datetime` object)."""
 
@@ -576,15 +583,3 @@ class Backup(PropertyManager):
     def __getattr__(self, name):
         """Defer attribute access to :attr:`timestamp`."""
         return getattr(self.timestamp, name)
-
-    def __hash__(self):
-        """Make it possible to use :class:`Backup` objects in sets and as dictionary keys."""
-        return hash(self.pathname)
-
-    def __eq__(self, other):
-        """Make it possible to use :class:`Backup` objects in sets and as dictionary keys."""
-        return isinstance(other, type(self)) and self.timestamp == other.timestamp
-
-    def __lt__(self, other):
-        """Enable proper sorting of backups."""
-        return self.timestamp < other.timestamp
