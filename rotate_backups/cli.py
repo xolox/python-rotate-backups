@@ -1,7 +1,7 @@
 # rotate-backups: Simple command line interface for backup rotation.
 #
 # Author: Peter Odding <peter@peterodding.com>
-# Last Change: April 13, 2016
+# Last Change: July 9, 2016
 # URL: https://github.com/xolox/python-rotate-backups
 
 """
@@ -123,11 +123,11 @@ Supported options:
 
   -v, --verbose
 
-    Make more noise (increase logging verbosity).
+    Make more noise (increase logging verbosity). Can be repeated.
 
   -q, --quiet
 
-    Make less noise (decrease logging verbosity).
+    Make less noise (decrease logging verbosity). Can be repeated.
 
   -h, --help
 
@@ -136,13 +136,13 @@ Supported options:
 
 # Standard library modules.
 import getopt
-import logging
 import sys
 
 # External dependencies.
 import coloredlogs
-from humanfriendly import concatenate, parse_path
+from humanfriendly import concatenate, parse_path, pluralize
 from humanfriendly.terminal import usage
+from verboselogs import VerboseLogger
 
 # Modules included in our package.
 from rotate_backups import (
@@ -153,7 +153,7 @@ from rotate_backups import (
 )
 
 # Initialize a logger.
-logger = logging.getLogger(__name__)
+logger = VerboseLogger(__name__)
 
 
 def main():
@@ -218,15 +218,25 @@ def main():
             else:
                 assert False, "Unhandled option! (programming error)"
         if rotation_scheme:
-            logger.debug("Parsed rotation scheme: %s", rotation_scheme)
+            logger.verbose("Rotation scheme defined on command line: %s", rotation_scheme)
         if arguments:
             # Rotation of the locations given on the command line.
             selected_locations.extend(coerce_location(value, sudo=use_sudo) for value in arguments)
+            location_source = 'command line arguments'
         else:
             # Rotation of all configured locations.
             selected_locations.extend(location for location, rotation_scheme, options in load_config_file(config_file))
-        # Show the usage message when no directories are given nor configured.
-        if not selected_locations:
+            location_source = 'configuration file'
+        # Inform the user which location(s) will be rotated.
+        if selected_locations:
+            logger.verbose("Selected %s based on %s:",
+                           pluralize(len(selected_locations), "location"),
+                           location_source)
+            for number, location in enumerate(selected_locations, start=1):
+                logger.verbose(" %i. %s", number, location)
+        else:
+            # Show the usage message when no directories are given nor configured.
+            logger.verbose("No location(s) to rotate selected.")
             usage(__doc__)
             return
     except Exception as e:

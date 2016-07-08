@@ -1,7 +1,7 @@
 # rotate-backups: Simple command line interface for backup rotation.
 #
 # Author: Peter Odding <peter@peterodding.com>
-# Last Change: July 8, 2016
+# Last Change: July 9, 2016
 # URL: https://github.com/xolox/python-rotate-backups
 
 """
@@ -16,7 +16,6 @@ The :mod:`rotate_backups` module contains the Python API of the
 import collections
 import datetime
 import fnmatch
-import logging
 import os
 import re
 
@@ -29,12 +28,13 @@ from natsort import natsort
 from property_manager import PropertyManager, key_property, required_property
 from six import string_types
 from six.moves import configparser
+from verboselogs import VerboseLogger
 
 # Semi-standard module versioning.
-__version__ = '3.2'
+__version__ = '3.3'
 
 # Initialize a logger for this module.
-logger = logging.getLogger(__name__)
+logger = VerboseLogger(__name__)
 
 GLOBAL_CONFIG_FILE = '/etc/rotate-backups.ini'
 """The pathname of the system wide configuration file (a string)."""
@@ -148,7 +148,7 @@ def load_config_file(configuration_file=None):
     """
     parser = configparser.RawConfigParser()
     if configuration_file:
-        logger.debug("Using custom configuration file: %s", format_path(configuration_file))
+        logger.verbose("Reading configuration file %s ..", format_path(configuration_file))
         loaded_files = parser.read(configuration_file)
         if len(loaded_files) == 0:
             msg = "Failed to read configuration file! (%s)"
@@ -157,7 +157,7 @@ def load_config_file(configuration_file=None):
         for config_file in LOCAL_CONFIG_FILE, GLOBAL_CONFIG_FILE:
             pathname = parse_path(config_file)
             if parser.read(pathname):
-                logger.debug("Using configuration file %s ..", format_path(pathname))
+                logger.verbose("Reading configuration file %s ..", format_path(pathname))
                 break
     for section in parser.sections():
         items = dict(parser.items(section))
@@ -334,7 +334,7 @@ class RotateBackups(object):
                         command = ['ionice', '--class', self.io_scheduling_class] + command
                     timer = Timer()
                     location.context.execute(*command)
-                    logger.debug("Deleted %s in %s.", format_path(backup.pathname), timer)
+                    logger.verbose("Deleted %s in %s.", format_path(backup.pathname), timer)
         if len(backups_to_preserve) == len(sorted_backups):
             logger.info("Nothing to do! (all backups preserved)")
 
@@ -348,14 +348,14 @@ class RotateBackups(object):
         location = coerce_location(location)
         for configured_location, rotation_scheme, options in load_config_file(self.config_file):
             if location == configured_location:
-                logger.debug("Loading custom configuration for location (%s) ..", location)
+                logger.verbose("Loading configuration for %s ..", location)
                 if rotation_scheme:
                     self.rotation_scheme = rotation_scheme
                 for name, value in options.items():
                     if value:
                         setattr(self, name, value)
                 return configured_location
-        logger.debug("No configuration found for location (%s).", location)
+        logger.verbose("No configuration found for %s.", location)
         return location
 
     def collect_backups(self, location):
@@ -376,9 +376,9 @@ class RotateBackups(object):
             match = TIMESTAMP_PATTERN.search(entry)
             if match:
                 if self.exclude_list and any(fnmatch.fnmatch(entry, p) for p in self.exclude_list):
-                    logger.debug("Excluded %r (it matched the exclude list).", entry)
+                    logger.verbose("Excluded %r (it matched the exclude list).", entry)
                 elif self.include_list and not any(fnmatch.fnmatch(entry, p) for p in self.include_list):
-                    logger.debug("Excluded %r (it didn't match the include list).", entry)
+                    logger.verbose("Excluded %r (it didn't match the include list).", entry)
                 else:
                     backups.append(Backup(
                         pathname=os.path.join(location.directory, entry),
