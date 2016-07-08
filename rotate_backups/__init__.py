@@ -16,6 +16,7 @@ The :mod:`rotate_backups` module contains the Python API of the
 import collections
 import datetime
 import fnmatch
+import numbers
 import os
 import re
 
@@ -26,12 +27,13 @@ from humanfriendly import Timer, coerce_boolean, format_path, parse_path
 from humanfriendly.text import compact, concatenate, split
 from natsort import natsort
 from property_manager import PropertyManager, key_property, required_property
+from simpleeval import simple_eval
 from six import string_types
 from six.moves import configparser
 from verboselogs import VerboseLogger
 
 # Semi-standard module versioning.
-__version__ = '3.3'
+__version__ = '3.4'
 
 # Initialize a logger for this module.
 logger = VerboseLogger(__name__)
@@ -90,10 +92,8 @@ def coerce_location(value, **options):
                     :func:`~executor.contexts.create_context()`.
     :returns: A :class:`Location` object.
     """
-    if isinstance(value, Location):
-        # Location objects pass through untouched.
-        return value
-    else:
+    # Location objects pass through untouched.
+    if not isinstance(value, Location):
         # Other values are expected to be strings.
         if not isinstance(value, string_types):
             msg = "Expected Location object or string, got %s instead!"
@@ -104,25 +104,40 @@ def coerce_location(value, **options):
             options['ssh_alias'] = ssh_alias
         else:
             directory = value
-        return Location(context=create_context(**options),
-                        directory=parse_path(directory))
+        # Construct the location object.
+        value = Location(
+            context=create_context(**options),
+            directory=parse_path(directory),
+        )
+    return value
 
 
 def coerce_retention_period(value):
     """
     Coerce a retention period to a Python value.
 
-    :param value: A string containing an integer number or the text 'always'.
-    :returns: An integer number or the string 'always'.
+    :param value: A string containing the text 'always', a number or
+                  an expression that can be evaluated to a number.
+    :returns: A number or the string 'always'.
     :raises: :exc:`~exceptions.ValueError` when the string can't be coerced.
     """
-    value = value.strip()
-    if value.lower() == 'always':
-        return 'always'
-    elif value.isdigit():
-        return int(value)
-    else:
-        raise ValueError("Invalid retention period! (%s)" % value)
+    # Numbers pass through untouched.
+    if not isinstance(value, numbers.Number):
+        # Other values are expected to be strings.
+        if not isinstance(value, string_types):
+            msg = "Expected string, got %s instead!"
+            raise ValueError(msg % type(value))
+        # Check for the literal string `always'.
+        value = value.strip()
+        if value.lower() == 'always':
+            value = 'always'
+        else:
+            # Evaluate other strings as expressions.
+            value = simple_eval(value)
+            if not isinstance(value, numbers.Number):
+                msg = "Expected numeric result, got %s instead!"
+                raise ValueError(msg % type(value))
+    return value
 
 
 def load_config_file(configuration_file=None):

@@ -1,7 +1,7 @@
 # Test suite for the `rotate-backups' Python package.
 #
 # Author: Peter Odding <peter@peterodding.com>
-# Last Change: April 13, 2016
+# Last Change: July 8, 2016
 # URL: https://github.com/xolox/python-rotate-backups
 
 """Test suite for the `rotate-backups` package."""
@@ -22,6 +22,7 @@ from six.moves import configparser
 from rotate_backups import (
     RotateBackups,
     coerce_location,
+    coerce_retention_period,
     load_config_file,
 )
 from rotate_backups.cli import main
@@ -94,6 +95,14 @@ class RotateBackupsTestCase(unittest.TestCase):
     def setUp(self):
         """Enable verbose logging for the test suite."""
         coloredlogs.install(level=logging.DEBUG)
+
+    def test_retention_period_coercion(self):
+        """Test coercion of retention period expressions."""
+        assert coerce_retention_period('always') == 'always'
+        assert coerce_retention_period('Always') == 'always'
+        assert coerce_retention_period(42) == 42
+        assert coerce_retention_period('42') == 42
+        assert coerce_retention_period('21 * 2') == 42
 
     def test_argument_validation(self):
         """Test argument validation."""

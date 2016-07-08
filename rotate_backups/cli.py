@@ -33,8 +33,10 @@ Supported options:
 
     Set the number of hourly backups to preserve during rotation:
 
-    - If COUNT is an integer it gives the number of hourly backups to preserve,
+    - If COUNT is a number it gives the number of hourly backups to preserve,
       starting from the most recent hourly backup and counting back in time.
+    - Alternatively you can provide an expression that will be evaluated to get
+      a number (e.g. if COUNT is `7 * 2' the result would be 14).
     - You can also pass `always' for COUNT, in this case all hourly backups are
       preserved.
     - By default no hourly backups are preserved.

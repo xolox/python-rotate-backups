@@ -122,8 +122,10 @@ Please use the ``--dry-run`` option to test the effect of the specified rotation
 
    "``-H``, ``--hourly=COUNT``","Set the number of hourly backups to preserve during rotation:
    
-   - If ``COUNT`` is an integer it gives the number of hourly backups to preserve,
+   - If ``COUNT`` is a number it gives the number of hourly backups to preserve,
      starting from the most recent hourly backup and counting back in time.
+   - Alternatively you can provide an expression that will be evaluated to get
+     a number (e.g. if ``COUNT`` is ""7 \* 2"" the result would be 14).
    - You can also pass ""always"" for ``COUNT``, in this case all hourly backups are
      preserved.
    - By default no hourly backups are preserved."
@@ -176,8 +178,8 @@ Please use the ``--dry-run`` option to test the effect of the specified rotation
    remote system over SSH)."
    "``-n``, ``--dry-run``","Don't make any changes, just print what would be done. This makes it easy
    to evaluate the impact of a rotation scheme without losing any backups."
-   "``-v``, ``--verbose``",Make more noise (increase logging verbosity).
-   "``-q``, ``--quiet``",Make less noise (decrease logging verbosity).
+   "``-v``, ``--verbose``",Make more noise (increase logging verbosity). Can be repeated.
+   "``-q``, ``--quiet``",Make less noise (decrease logging verbosity). Can be repeated.
    "``-h``, ``--help``","Show this message and exit.
    "
 
@@ -216,9 +218,9 @@ make regular backups of:
    ionice = idle
 
    [/backups/server]
-   daily = 7
-   weekly = 4
-   monthly = 12
+   daily = 7 * 2
+   weekly = 4 * 2
+   monthly = 12 * 4
    yearly = always
    ionice = idle
 
@@ -233,6 +235,10 @@ make regular backups of:
    weekly = 4
    monthly = 2
    ionice = idle
+
+As you can see in the retention periods of the directory ``/backups/server`` in
+the example above you are allowed to use expressions that evaluate to a number
+(instead of having to write out the literal number).
 
 Here's an example of a configuration for two remote directories:
 
