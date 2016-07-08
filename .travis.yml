@@ -6,8 +6,10 @@ python:
   - "3.5"
   - "pypy"
 install:
-  - pip install coveralls
-  - LC_ALL=C pip install .
+  - pip install pip-accel
+  - pip-accel install coveralls
+  - pip-accel install --requirement=requirements-checks.txt
+  - LC_ALL=C pip-accel install .
 script:
   - make check
   - make test

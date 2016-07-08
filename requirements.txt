@@ -1,0 +1,7 @@
+coloredlogs >= 5.0
+executor >= 9.8
+humanfriendly >= 1.44.5
+naturalsort >= 1.4
+property-manager >= 1.3
+python-dateutil >= 2.2
+six >= 1.9.0

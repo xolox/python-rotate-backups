@@ -66,16 +66,16 @@ pygments_style = 'sphinx'
 # From: http://twistedmatrix.com/trac/ticket/4582.
 intersphinx_mapping = {
     'python': ('http://docs.python.org', None),
-    'dateutil': ('https://dateutil.readthedocs.org/en/latest/', None),
-    'executor': ('https://executor.readthedocs.org/en/latest/', None),
-    'propertymanager': ('https://property-manager.readthedocs.org/en/latest/', None),
+    'dateutil': ('https://dateutil.readthedocs.io/en/latest/', None),
+    'executor': ('https://executor.readthedocs.io/en/latest/', None),
+    'propertymanager': ('https://property-manager.readthedocs.io/en/latest/', None),
 }
 
 # -- Options for HTML output ---------------------------------------------------
 
 # The theme to use for HTML and HTML Help pages.  See the documentation for
 # a list of builtin themes.
-html_theme = 'default'
+html_theme = 'classic'
 
 # Output file base name for HTML help builder.
 htmlhelp_basename = 'rotatebackupsdoc'
