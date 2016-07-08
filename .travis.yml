@@ -16,3 +16,6 @@ script:
   - make test
 after_success:
   - coveralls
+branches:
+  except:
+    - /^[0-9]/
