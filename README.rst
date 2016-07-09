@@ -143,6 +143,13 @@ Please use the ``--dry-run`` option to test the effect of the specified rotation
    "``-x``, ``--exclude=PATTERN``","Don't process backups that match the shell pattern given by ``PATTERN``. This
    argument can be repeated. Make sure to quote ``PATTERN`` so the shell doesn't
    expand the pattern before it's received by rotate-backups."
+   "``-j``, ``--parallel``","Remove backups in parallel, one backup per mount point at a time. The idea
+   behind this approach is that parallel rotation is most useful when the
+   files to be removed are on different disks and so multiple devices can be
+   utilized at the same time.
+   
+   Because mount points are per system the ``-j``, ``--parallel`` option will also
+   parallelize over backups located on multiple remote systems."
    "``-r``, ``--relaxed``","By default the time window for each rotation scheme is enforced (this is
    referred to as strict rotation) but the ``-r``, ``--relaxed`` option can be used
    to alter this behavior. The easiest way to explain the difference between

@@ -22,8 +22,9 @@ import re
 
 # External dependencies.
 from dateutil.relativedelta import relativedelta
-from executor.contexts import create_context
-from humanfriendly import Timer, coerce_boolean, format_path, parse_path
+from executor.concurrent import CommandPool
+from executor.contexts import RemoteContext, create_context
+from humanfriendly import Timer, coerce_boolean, format_path, parse_path, pluralize
 from humanfriendly.text import compact, concatenate, split
 from natsort import natsort
 from property_manager import PropertyManager, lazy_property, key_property, required_property
@@ -33,7 +34,7 @@ from six.moves import configparser
 from verboselogs import VerboseLogger
 
 # Semi-standard module versioning.
-__version__ = '3.5'
+__version__ = '4.0'
 
 # Initialize a logger for this module.
 logger = VerboseLogger(__name__)
@@ -291,7 +292,37 @@ class RotateBackups(object):
         self.config_file = config_file
         self.strict = strict
 
-    def rotate_backups(self, location, load_config=True):
+    def rotate_concurrent(self, *locations, **kw):
+        """
+        Rotate the backups in the given locations concurrently.
+
+        :param locations: One or more values accepted by :func:`coerce_location()`.
+        :param kw: Any keyword arguments are passed on to :func:`rotate_backups()`.
+
+        This function uses :func:`rotate_backups()` to prepare rotation
+        commands for the given locations and then it removes backups in
+        parallel, one backup per mount point at a time.
+
+        The idea behind this approach is that parallel rotation is most useful
+        when the files to be removed are on different disks and so multiple
+        devices can be utilized at the same time.
+
+        Because mount points are per system :func:`rotate_concurrent()` will
+        also parallelize over backups located on multiple remote systems.
+        """
+        timer = Timer()
+        pool = CommandPool(concurrency=10)
+        logger.info("Scanning %s ..", pluralize(len(locations), "backup location"))
+        for location in locations:
+            for cmd in self.rotate_backups(location, prepare=True, **kw):
+                pool.add(cmd)
+        if pool.num_commands > 0:
+            backups = pluralize(pool.num_commands, "backup")
+            logger.info("Preparing to rotate %s (in parallel) ..", backups)
+            pool.run()
+            logger.info("Successfully rotated %s in %s.", backups, timer)
+
+    def rotate_backups(self, location, load_config=True, prepare=False):
         """
         Rotate the backups in a directory according to a flexible rotation scheme.
 
@@ -301,6 +332,11 @@ class RotateBackups(object):
                             a configuration file. In this case the caller's
                             arguments are only used when the configuration file
                             doesn't define a configuration for the location.
+        :param prepare: If this is :data:`True` (not the default) then
+                        :func:`rotate_backups()` will prepare the required
+                        rotation commands without running them.
+        :returns: A list with the rotation commands (:class:`ExternalCommand`
+                  objects).
         :raises: :exc:`~exceptions.ValueError` when the given location doesn't
                  exist, isn't readable or isn't writable. The third check is
                  only performed when dry run isn't enabled.
@@ -314,6 +350,7 @@ class RotateBackups(object):
         :func:`apply_rotation_scheme()` and
         :func:`find_preservation_criteria()` methods.
         """
+        rotation_commands = []
         location = coerce_location(location)
         # Load configuration overrides by user?
         if load_config:
@@ -344,14 +381,19 @@ class RotateBackups(object):
             else:
                 logger.info("Deleting %s ..", format_path(backup.pathname))
                 if not self.dry_run:
-                    command = ['rm', '-Rf', backup.pathname]
+                    command_line = ['rm', '-Rf', backup.pathname]
                     if self.io_scheduling_class:
-                        command = ['ionice', '--class', self.io_scheduling_class] + command
-                    timer = Timer()
-                    location.context.execute(*command)
-                    logger.verbose("Deleted %s in %s.", format_path(backup.pathname), timer)
+                        command_line = ['ionice', '--class', self.io_scheduling_class] + command_line
+                    group_by = (location.ssh_alias, location.mount_point)
+                    command = location.context.prepare(*command_line, group_by=group_by)
+                    rotation_commands.append(command)
+                    if not prepare:
+                        timer = Timer()
+                        command.wait()
+                        logger.verbose("Deleted %s in %s.", format_path(backup.pathname), timer)
         if len(backups_to_preserve) == len(sorted_backups):
             logger.info("Nothing to do! (all backups preserved)")
+        return rotation_commands
 
     def load_config_file(self, location):
         """
@@ -504,9 +546,19 @@ class Location(PropertyManager):
         """The pathname of a directory containing backups (a string)."""
 
     @lazy_property
+    def mount_point(self):
+        """The pathname of the mount point of :attr:`directory` (a string)."""
+        return self.context.capture('stat', '--format=%m', self.directory)
+
+    @lazy_property
+    def is_remote(self):
+        """:data:`True` if the location is remote, :data:`False` otherwise."""
+        return isinstance(self.context, RemoteContext)
+
+    @lazy_property
     def ssh_alias(self):
         """The SSH alias of a remote location (a string or :data:`None`)."""
-        return getattr(self.context, 'ssh_alias', None)
+        return self.context.ssh_alias if self.is_remote else None
 
     @property
     def key_properties(self):
@@ -518,7 +570,7 @@ class Location(PropertyManager):
         ordered first by their :attr:`ssh_alias` and second by their
         :attr:`directory`.
         """
-        return ['ssh_alias', 'directory'] if self.ssh_alias else ['directory']
+        return ['ssh_alias', 'directory'] if self.is_remote else ['directory']
 
     def ensure_exists(self):
         """Make sure the location exists."""

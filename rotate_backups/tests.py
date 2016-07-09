@@ -201,6 +201,41 @@ class RotateBackupsTestCase(unittest.TestCase):
             backups_that_were_preserved = set(os.listdir(root))
             assert backups_that_were_preserved == expected_to_be_preserved
 
+    def test_rotate_concurrent(self):
+        """Test the :func:`.rotate_concurrent()` function."""
+        # These are the backups expected to be preserved
+        # (the same as in test_rotate_backups).
+        expected_to_be_preserved = set([
+            '2013-10-10@20:07',  # monthly, yearly (1)
+            '2013-11-01@20:06',  # monthly (2)
+            '2013-12-01@20:07',  # monthly (3)
+            '2014-01-01@20:07',  # monthly (4), yearly (2)
+            '2014-02-01@20:05',  # monthly (5)
+            '2014-03-01@20:04',  # monthly (6)
+            '2014-04-01@20:03',  # monthly (7)
+            '2014-05-01@20:06',  # monthly (8)
+            '2014-06-01@20:01',  # monthly (9)
+            '2014-06-09@20:01',  # weekly (1)
+            '2014-06-16@20:02',  # weekly (2)
+            '2014-06-23@20:04',  # weekly (3)
+            '2014-06-26@20:04',  # daily (1)
+            '2014-06-27@20:02',  # daily (2)
+            '2014-06-28@20:02',  # daily (3)
+            '2014-06-29@20:01',  # daily (4)
+            '2014-06-30@20:03',  # daily (5), weekly (4)
+            '2014-07-01@20:02',  # daily (6), monthly (10)
+            '2014-07-02@20:03',  # hourly (1), daily (7)
+            'some-random-directory',  # no recognizable time stamp, should definitely be preserved
+        ])
+        with TemporaryDirectory(prefix='rotate-backups-', suffix='-test-suite') as root:
+            self.create_sample_backup_set(root)
+            run_cli(
+                '--verbose', '--hourly=24', '--daily=7', '--weekly=4',
+                '--monthly=12', '--yearly=always', '--parallel', root,
+            )
+            backups_that_were_preserved = set(os.listdir(root))
+            assert backups_that_were_preserved == expected_to_be_preserved
+
     def test_include_list(self):
         """Test include list logic."""
         # These are the backups expected to be preserved within the year 2014

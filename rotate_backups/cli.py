@@ -73,6 +73,16 @@ Supported options:
     argument can be repeated. Make sure to quote PATTERN so the shell doesn't
     expand the pattern before it's received by rotate-backups.
 
+  -j, --parallel
+
+    Remove backups in parallel, one backup per mount point at a time. The idea
+    behind this approach is that parallel rotation is most useful when the
+    files to be removed are on different disks and so multiple devices can be
+    utilized at the same time.
+
+    Because mount points are per system the -j, --parallel option will also
+    parallelize over backups located on multiple remote systems.
+
   -r, --relaxed
 
     By default the time window for each rotation scheme is enforced (this is
@@ -167,6 +177,7 @@ def main():
     exclude_list = []
     include_list = []
     io_scheduling_class = None
+    parallel = False
     rotation_scheme = {}
     use_sudo = False
     strict = True
@@ -174,10 +185,10 @@ def main():
     selected_locations = []
     # Parse the command line arguments.
     try:
-        options, arguments = getopt.getopt(sys.argv[1:], 'H:d:w:m:y:I:x:ri:c:r:unvqh', [
+        options, arguments = getopt.getopt(sys.argv[1:], 'H:d:w:m:y:I:x:jri:c:r:unvqh', [
             'hourly=', 'daily=', 'weekly=', 'monthly=', 'yearly=', 'include=',
-            'exclude=', 'relaxed', 'ionice=', 'config=', 'use-sudo', 'dry-run',
-            'verbose', 'quiet', 'help',
+            'exclude=', 'parallel', 'relaxed', 'ionice=', 'config=',
+            'use-sudo', 'dry-run', 'verbose', 'quiet', 'help',
         ])
         for option, value in options:
             if option in ('-H', '--hourly'):
@@ -194,6 +205,8 @@ def main():
                 include_list.append(value)
             elif option in ('-x', '--exclude'):
                 exclude_list.append(value)
+            elif option in ('-j', '--parallel'):
+                parallel = True
             elif option in ('-r', '--relaxed'):
                 strict = False
             elif option in ('-i', '--ionice'):
@@ -245,13 +258,17 @@ def main():
         logger.error("%s", e)
         sys.exit(1)
     # Rotate the backups in the selected directories.
-    for location in selected_locations:
-        RotateBackups(
-            rotation_scheme=rotation_scheme,
-            include_list=include_list,
-            exclude_list=exclude_list,
-            io_scheduling_class=io_scheduling_class,
-            dry_run=dry_run,
-            config_file=config_file,
-            strict=strict,
-        ).rotate_backups(location)
+    program = RotateBackups(
+        config_file=config_file,
+        dry_run=dry_run,
+        exclude_list=exclude_list,
+        include_list=include_list,
+        io_scheduling_class=io_scheduling_class,
+        rotation_scheme=rotation_scheme,
+        strict=strict,
+    )
+    if parallel:
+        program.rotate_concurrent(*selected_locations)
+    else:
+        for location in selected_locations:
+            program.rotate_backups(location)
