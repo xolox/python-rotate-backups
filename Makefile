@@ -1,7 +1,7 @@
 # Makefile for rotate-backups
 #
 # Author: Peter Odding <peter@peterodding.com>
-# Last Change: July 8, 2016
+# Last Change: July 9, 2016
 # URL: https://github.com/xolox/python-rotate-backups
 
 WORKON_HOME ?= $(HOME)/.virtualenvs
@@ -44,14 +44,14 @@ reset:
 	$(MAKE) install
 
 check: install
-	@echo "Updating flask8 .." >&2
+	@echo "Updating flake8 .." >&2
 	@pip-accel install --upgrade --quiet --requirement=requirements-checks.txt
 	@flake8
 
 test: install
 	@pip-accel install --quiet coverage pytest pytest-cov
-	@py.test -v --cov --cov-fail-under=90
-	@coverage html
+	@py.test -v --cov --cov-report=html --no-cov-on-fail
+	@coverage report --fail-under=90
 
 tox: install
 	@pip-accel install --quiet tox && tox

@@ -1,12 +1,16 @@
-# -*- coding: utf-8 -*-
+"""
+Documentation build configuration file for the `rotate-backups` package.
 
-"""Documentation build configuration file for the `rotate-backups` package."""
+This Python script contains the Sphinx configuration for building the
+documentation of the `rotate-backups` project. This file is execfile()d
+with the current directory set to its containing dir.
+"""
 
 import os
 import sys
 
 # Add the 'rotate-backups' source distribution's root directory to the module path.
-sys.path.insert(0, os.path.abspath('..'))
+sys.path.insert(0, os.path.abspath(os.pardir))
 
 # -- General configuration -----------------------------------------------------
 
