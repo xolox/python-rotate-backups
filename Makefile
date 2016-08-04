@@ -1,7 +1,7 @@
-# Makefile for rotate-backups
+# Makefile for rotate-backups.
 #
 # Author: Peter Odding <peter@peterodding.com>
-# Last Change: July 9, 2016
+# Last Change: July 13, 2016
 # URL: https://github.com/xolox/python-rotate-backups
 
 WORKON_HOME ?= $(HOME)/.virtualenvs
@@ -61,7 +61,7 @@ readme: install
 
 docs: readme
 	@pip-accel install --quiet sphinx
-	cd docs && sphinx-build -nb html -d build/doctrees . build/html
+	@cd docs && sphinx-build -nb html -d build/doctrees . build/html
 
 publish: install
 	git push origin && git push --tags origin
@@ -72,7 +72,7 @@ publish: install
 	$(MAKE) clean
 
 clean:
-	@rm -Rf *.egg .cache .coverage build dist docs/build htmlcov
+	@rm -Rf *.egg .cache .coverage .tox build dist docs/build htmlcov
 	@find -depth -type d -name __pycache__ -exec rm -Rf {} \;
 	@find -type f -name '*.pyc' -delete
 
