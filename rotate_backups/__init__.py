@@ -27,7 +27,14 @@ from executor.contexts import RemoteContext, create_context
 from humanfriendly import Timer, coerce_boolean, format_path, parse_path, pluralize
 from humanfriendly.text import compact, concatenate, split
 from natsort import natsort
-from property_manager import PropertyManager, lazy_property, key_property, required_property
+from property_manager import (
+    PropertyManager,
+    cached_property,
+    key_property,
+    lazy_property,
+    mutable_property,
+    required_property,
+)
 from simpleeval import simple_eval
 from six import string_types
 from six.moves import configparser
@@ -193,8 +200,7 @@ def load_config_file(configuration_file=None):
         yield location, rotation_scheme, options
 
 
-def rotate_backups(directory, rotation_scheme, include_list=None, exclude_list=None,
-                   dry_run=False, io_scheduling_class=None):
+def rotate_backups(directory, rotation_scheme, **options):
     """
     Rotate the backups in a directory according to a flexible rotation scheme.
 
@@ -205,92 +211,139 @@ def rotate_backups(directory, rotation_scheme, include_list=None, exclude_list=N
               :func:`~RotateBackups.rotate_backups()` method for an explanation
               of this function's parameters.
     """
-    RotateBackups(
-        rotation_scheme=rotation_scheme,
-        include_list=include_list,
-        exclude_list=exclude_list,
-        dry_run=dry_run,
-        io_scheduling_class=io_scheduling_class,
-    ).rotate_backups(directory)
+    program = RotateBackups(rotation_scheme=rotation_scheme, **options)
+    program.rotate_backups(directory)
 
 
-class RotateBackups(object):
+class RotateBackups(PropertyManager):
 
     """Python API for the ``rotate-backups`` program."""
 
-    def __init__(self, rotation_scheme, include_list=None, exclude_list=None,
-                 dry_run=False, io_scheduling_class=None, config_file=None,
-                 strict=True):
+    def __init__(self, rotation_scheme, **options):
         """
         Initialize a :class:`RotateBackups` object.
 
-        :param rotation_scheme: A dictionary with one or more of the keys 'hourly',
-                                'daily', 'weekly', 'monthly', 'yearly'. Each key is
-                                expected to have one of the following values:
-
-                                - An integer gives the number of backups in the
-                                  corresponding category to preserve, starting from
-                                  the most recent backup and counting back in
-                                  time.
-                                - The string 'always' means all backups in the
-                                  corresponding category are preserved (useful for
-                                  the biggest time unit in the rotation scheme).
-
-                                By default no backups are preserved for categories
-                                (keys) not present in the dictionary.
-        :param include_list: A list of strings with :mod:`fnmatch` patterns. If a
-                             nonempty include list is specified each backup must
-                             match a pattern in the include list, otherwise it
-                             will be ignored.
-        :param exclude_list: A list of strings with :mod:`fnmatch` patterns. If a
-                             backup matches the exclude list it will be ignored,
-                             *even if it also matched the include list* (it's the
-                             only logical way to combine both lists).
-        :param dry_run: If this is :data:`True` then no changes will be made, which
-                        provides a 'preview' of the effect of the rotation scheme
-                        (the default is :data:`False`). Right now this is only useful
-                        in the command line interface because there's no return
-                        value.
-        :param io_scheduling_class: Use ``ionice`` to set the I/O scheduling class
-                                    (expected to be one of the strings 'idle',
-                                    'best-effort' or 'realtime').
-        :param config_file: The pathname of a configuration file (a string).
-        :param strict: Whether to enforce the time window for each rotation
-                       frequency (a boolean, defaults to :data:`True`). The
-                       easiest way to explain the difference between strict
-                       and relaxed rotation is using an example:
-
-                       - If `strict` is :data:`True` and the number of hourly
-                         backups to preserve is three, only backups created in
-                         the relevant time window (the hour of the most recent
-                         backup and the two hours leading up to that) will
-                         match the hourly frequency.
-
-                       - If `strict` is :data:`False` then the three most
-                         recent backups will all match the hourly frequency
-                         (and thus be preserved), regardless of the calculated
-                         time window.
-
-                       If the explanation above is not clear enough, here's a
-                       simple way to decide whether you want to customize this
-                       behavior:
-
-                       - If your backups are created at regular intervals and
-                         you never miss an interval then the default
-                         (:data:`True`) is most likely fine.
-
-                       - If your backups are created at irregular intervals
-                         then you may want to set `strict` to :data:`False` to
-                         convince :class:`RotateBackups` to preserve more
-                         backups.
+        :param rotation_scheme: Used to set :attr:`rotation_scheme`.
+        :param options: Any keyword arguments are used to set the values of the
+                        properties :attr:`config_file`, :attr:`dry_run`,
+                        :attr:`exclude_list`, :attr:`include_list`,
+                        :attr:`io_scheduling_class` and :attr:`strict`.
         """
-        self.rotation_scheme = rotation_scheme
-        self.include_list = include_list
-        self.exclude_list = exclude_list
-        self.dry_run = dry_run
-        self.io_scheduling_class = io_scheduling_class
-        self.config_file = config_file
-        self.strict = strict
+        options.update(rotation_scheme=rotation_scheme)
+        super(RotateBackups, self).__init__(**options)
+
+    @mutable_property
+    def config_file(self):
+        """
+        The pathname of a configuration file (a string or :data:`None`).
+
+        When this property is set :func:`rotate_backups()` will use
+        :func:`load_config_file()` to give the user (operator) a chance to set
+        the rotation scheme and other options via a configuration file.
+        """
+
+    @mutable_property
+    def dry_run(self):
+        """
+        :data:`True` to simulate rotation, :data:`False` to actually remove backups (defaults to :data:`False`).
+
+        If this is :data:`True` then :func:`rotate_backups()` won't make any
+        actual changes, which provides a 'preview' of the effect of the
+        rotation scheme. Right now this is only useful in the command line
+        interface because there's no return value.
+        """
+        return False
+
+    @cached_property(writable=True)
+    def exclude_list(self):
+        """
+        Filename patterns to exclude specific backups (a list of strings).
+
+        This is a list of strings with :mod:`fnmatch` patterns. When
+        :func:`collect_backups()` encounters a backup whose name matches any of
+        the patterns in this list the backup will be ignored, *even if it also
+        matches the include list* (it's the only logical way to combine both
+        lists).
+
+        :see also: :attr:`include_list`
+        """
+        return []
+
+    @cached_property(writable=True)
+    def include_list(self):
+        """
+        Filename patterns to select specific backups (a list of strings).
+
+        This is a list of strings with :mod:`fnmatch` patterns. When it's not
+        empty :func:`collect_backups()` will only collect backups whose name
+        matches a pattern in the list.
+
+        :see also: :attr:`exclude_list`
+        """
+        return []
+
+    @mutable_property
+    def io_scheduling_class(self):
+        """
+        The I/O scheduling class for backup rotation (a string or :data:`None`).
+
+        When this property is set then ``ionice`` will be used to set the I/O
+        scheduling class for backup rotation. This can be useful to reduce the
+        impact of backup rotation on the rest of the system.
+
+        The value of this property is expected to be one of the strings 'idle',
+        'best-effort' or 'realtime'.
+        """
+
+    @required_property
+    def rotation_scheme(self):
+        """
+        The rotation scheme to apply to backups (a dictionary).
+
+        Each key in this dictionary defines a rotation frequency (one of the
+        strings 'hourly', 'daily', 'weekly', 'monthly' and 'yearly') and each
+        value defines a retention count:
+
+        - An integer value represents the number of backups to preserve in the
+          given rotation frequency, starting from the most recent backup and
+          counting back in time.
+
+        - The string 'always' means all backups in the given rotation frequency
+          are preserved (this is intended to be used with the biggest frequency
+          in the rotation scheme, e.g. yearly).
+
+        No backups are preserved for rotation frequencies that are not present
+        in the dictionary.
+        """
+
+    @mutable_property
+    def strict(self):
+        """
+        Whether to enforce the time window for each rotation frequency (a boolean, defaults to :data:`True`).
+
+        The easiest way to explain the difference between strict and relaxed
+        rotation is using an example:
+
+        - If :attr:`strict` is :data:`True` and the number of hourly backups to
+          preserve is three, only backups created in the relevant time window
+          (the hour of the most recent backup and the two hours leading up to
+          that) will match the hourly frequency.
+
+        - If :attr:`strict` is :data:`False` then the three most recent backups
+          will all match the hourly frequency (and thus be preserved),
+          regardless of the calculated time window.
+
+        If the explanation above is not clear enough, here's a simple way to
+        decide whether you want to customize this behavior:
+
+        - If your backups are created at regular intervals and you never miss
+          an interval then the default (:data:`True`) is most likely fine.
+
+        - If your backups are created at irregular intervals then you may want
+          to set :attr:`strict` to :data:`False` to convince
+          :class:`RotateBackups` to preserve more backups.
+        """
+        return True
 
     def rotate_concurrent(self, *locations, **kw):
         """
