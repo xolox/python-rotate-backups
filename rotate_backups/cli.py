@@ -83,6 +83,12 @@ Supported options:
     Because mount points are per system the -j, --parallel option will also
     parallelize over backups located on multiple remote systems.
 
+  -p, --prefer-recent
+
+    By default the first (oldest) backup in each time slot is preserved. If
+    you'd prefer to keep the most recent backup in each time slot instead then
+    this option is for you.
+
   -r, --relaxed
 
     By default the time window for each rotation scheme is enforced (this is
@@ -180,10 +186,10 @@ def main():
     selected_locations = []
     # Parse the command line arguments.
     try:
-        options, arguments = getopt.getopt(sys.argv[1:], 'H:d:w:m:y:I:x:jri:c:r:unvqh', [
+        options, arguments = getopt.getopt(sys.argv[1:], 'H:d:w:m:y:I:x:jpri:c:r:unvqh', [
             'hourly=', 'daily=', 'weekly=', 'monthly=', 'yearly=', 'include=',
-            'exclude=', 'parallel', 'relaxed', 'ionice=', 'config=',
-            'use-sudo', 'dry-run', 'verbose', 'quiet', 'help',
+            'exclude=', 'parallel', 'prefer-recent', 'relaxed', 'ionice=',
+            'config=', 'use-sudo', 'dry-run', 'verbose', 'quiet', 'help',
         ])
         for option, value in options:
             if option in ('-H', '--hourly'):
@@ -202,6 +208,8 @@ def main():
                 kw['exclude_list'].append(value)
             elif option in ('-j', '--parallel'):
                 parallel = True
+            elif option in ('-p', '--prefer-recent'):
+                kw['prefer_recent'] = True
             elif option in ('-r', '--relaxed'):
                 kw['strict'] = False
             elif option in ('-i', '--ionice'):

@@ -1,7 +1,7 @@
 # Test suite for the `rotate-backups' Python package.
 #
 # Author: Peter Odding <peter@peterodding.com>
-# Last Change: July 9, 2016
+# Last Change: August 5, 2016
 # URL: https://github.com/xolox/python-rotate-backups
 
 """Test suite for the `rotate-backups` package."""
@@ -337,6 +337,28 @@ class RotateBackupsTestCase(unittest.TestCase):
             assert os.path.exists(os.path.join(root, 'galera_backup_db4.sl.example.lab_2016-03-17_10-00'))
             assert os.path.exists(os.path.join(root, 'galera_backup_db4.sl.example.lab_2016-03-17_12-00'))
             assert os.path.exists(os.path.join(root, 'galera_backup_db4.sl.example.lab_2016-03-17_16-00'))
+
+    def test_prefer_old(self):
+        """Test the default preference for the oldest backup in each time slot."""
+        with TemporaryDirectory(prefix='rotate-backups-', suffix='-test-suite') as root:
+            os.mkdir(os.path.join(root, 'backup-2016-01-10_21-15-00'))
+            os.mkdir(os.path.join(root, 'backup-2016-01-10_21-30-00'))
+            os.mkdir(os.path.join(root, 'backup-2016-01-10_21-45-00'))
+            run_cli('--hourly=1', root)
+            assert os.path.exists(os.path.join(root, 'backup-2016-01-10_21-15-00'))
+            assert not os.path.exists(os.path.join(root, 'backup-2016-01-10_21-30-00'))
+            assert not os.path.exists(os.path.join(root, 'backup-2016-01-10_21-45-00'))
+
+    def test_prefer_new(self):
+        """Test the alternative preference for the newest backup in each time slot."""
+        with TemporaryDirectory(prefix='rotate-backups-', suffix='-test-suite') as root:
+            os.mkdir(os.path.join(root, 'backup-2016-01-10_21-15-00'))
+            os.mkdir(os.path.join(root, 'backup-2016-01-10_21-30-00'))
+            os.mkdir(os.path.join(root, 'backup-2016-01-10_21-45-00'))
+            run_cli('--hourly=1', '--prefer-recent', root)
+            assert not os.path.exists(os.path.join(root, 'backup-2016-01-10_21-15-00'))
+            assert not os.path.exists(os.path.join(root, 'backup-2016-01-10_21-30-00'))
+            assert os.path.exists(os.path.join(root, 'backup-2016-01-10_21-45-00'))
 
     def create_sample_backup_set(self, root):
         """Create a sample backup set to be rotated."""

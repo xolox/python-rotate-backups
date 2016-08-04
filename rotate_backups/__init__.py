@@ -1,7 +1,7 @@
 # rotate-backups: Simple command line interface for backup rotation.
 #
 # Author: Peter Odding <peter@peterodding.com>
-# Last Change: August 4, 2016
+# Last Change: August 5, 2016
 # URL: https://github.com/xolox/python-rotate-backups
 
 """
@@ -41,7 +41,7 @@ from six.moves import configparser
 from verboselogs import VerboseLogger
 
 # Semi-standard module versioning.
-__version__ = '4.0'
+__version__ = '4.1'
 
 # Initialize a logger for this module.
 logger = VerboseLogger(__name__)
@@ -196,7 +196,8 @@ def load_config_file(configuration_file=None):
         options = dict(include_list=split(items.get('include-list', '')),
                        exclude_list=split(items.get('exclude-list', '')),
                        io_scheduling_class=items.get('ionice'),
-                       strict=coerce_boolean(items.get('strict', 'yes')))
+                       strict=coerce_boolean(items.get('strict', 'yes')),
+                       prefer_recent=coerce_boolean(items.get('prefer-recent', 'no')))
         yield location, rotation_scheme, options
 
 
@@ -294,6 +295,18 @@ class RotateBackups(PropertyManager):
         The value of this property is expected to be one of the strings 'idle',
         'best-effort' or 'realtime'.
         """
+
+    @mutable_property
+    def prefer_recent(self):
+        """
+        Whether to prefer older or newer backups in each time slot (a boolean).
+
+        Defaults to :data:`False` which means the oldest backup in each time
+        slot (an hour, a day, etc.) is preserved while newer backups in the
+        time slot are removed. You can set this to :data:`True` if you would
+        like to preserve the newest backup in each time slot instead.
+        """
+        return False
 
     @required_property
     def rotation_scheme(self):
@@ -544,11 +557,13 @@ class RotateBackups(PropertyManager):
             if frequency not in self.rotation_scheme:
                 backups.clear()
             else:
-                # Reduce the number of backups in each period of this rotation
-                # frequency to a single backup (the first in the period).
+                # Reduce the number of backups in each time slot of this
+                # rotation frequency to a single backup (the oldest one or the
+                # newest one).
                 for period, backups_in_period in backups.items():
-                    first_backup = sorted(backups_in_period)[0]
-                    backups[period] = [first_backup]
+                    index = -1 if self.prefer_recent else 0
+                    selected_backup = sorted(backups_in_period)[index]
+                    backups[period] = [selected_backup]
                 # Check if we need to rotate away backups in old periods.
                 retention_period = self.rotation_scheme[frequency]
                 if retention_period != 'always':
