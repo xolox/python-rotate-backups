@@ -150,6 +150,9 @@ Please use the ``--dry-run`` option to test the effect of the specified rotation
    
    Because mount points are per system the ``-j``, ``--parallel`` option will also
    parallelize over backups located on multiple remote systems."
+   "``-p``, ``--prefer-recent``","By default the first (oldest) backup in each time slot is preserved. If
+   you'd prefer to keep the most recent backup in each time slot instead then
+   this option is for you."
    "``-r``, ``--relaxed``","By default the time window for each rotation scheme is enforced (this is
    referred to as strict rotation) but the ``-r``, ``--relaxed`` option can be used
    to alter this behavior. The easiest way to explain the difference between
@@ -273,6 +276,28 @@ Here's an example of a configuration for two remote directories:
 
 As this example shows you have the option to connect as the root user or to
 connect as a regular user and use ``sudo`` to elevate privileges.
+
+Customizing the rotation algorithm
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Since publishing `rotate-backups` I've found that the default rotation
+algorithm is not to everyone's satisfaction and because the suggested
+alternatives were just as valid as the choices that I initially made,
+options were added to expose the alternative behaviors:
+
++-------------------------------------+-------------------------------------+
+| Default                             | Alternative                         |
++=====================================+=====================================+
+| Strict rotation (the time window    | Relaxed rotation (time windows are  |
+| for each rotation frequency is      | not enforced). Enabled by the       |
+| enforced).                          | ``-r``, ``--relaxed`` option.       |
++-------------------------------------+-------------------------------------+
+| The oldest backup in each time slot | The newest backup in each time slot |
+| is preserved and newer backups in   | is preserved and older backups in   |
+| the time slot are removed.          | the time slot are removed. Enabled  |
+|                                     | by the ``-p``, ``--prefer-recent``  |
+|                                     | option.                             |
++-------------------------------------+-------------------------------------+
 
 Contact
 -------
