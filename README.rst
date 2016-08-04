@@ -120,6 +120,11 @@ Please use the ``--dry-run`` option to test the effect of the specified rotation
    :widths: 30, 70
 
 
+   "``-M``, ``--minutely=COUNT``","In a literal sense this option sets the number of ""backups per minute"" to
+   preserve during rotation. For most use cases that doesn't make a lot of
+   sense :-) but you can combine the ``--minutely`` and ``--relaxed`` options to
+   preserve more than one backup per hour.  Refer to the usage of the ``-H``,
+   ``--hourly`` option for details about ``COUNT``."
    "``-H``, ``--hourly=COUNT``","Set the number of hourly backups to preserve during rotation:
    
    - If ``COUNT`` is a number it gives the number of hourly backups to preserve,
@@ -130,13 +135,13 @@ Please use the ``--dry-run`` option to test the effect of the specified rotation
      preserved.
    - By default no hourly backups are preserved."
    "``-d``, ``--daily=COUNT``","Set the number of daily backups to preserve during rotation. Refer to the
-   usage of the ``-H``, ``--hourly`` option for details."
+   usage of the ``-H``, ``--hourly`` option for details about ``COUNT``."
    "``-w``, ``--weekly=COUNT``","Set the number of weekly backups to preserve during rotation. Refer to the
-   usage of the ``-H``, ``--hourly`` option for details."
+   usage of the ``-H``, ``--hourly`` option for details about ``COUNT``."
    "``-m``, ``--monthly=COUNT``","Set the number of monthly backups to preserve during rotation. Refer to the
-   usage of the ``-H``, ``--hourly`` option for details."
+   usage of the ``-H``, ``--hourly`` option for details about ``COUNT``."
    "``-y``, ``--yearly=COUNT``","Set the number of yearly backups to preserve during rotation. Refer to the
-   usage of the ``-H``, ``--hourly`` option for details."
+   usage of the ``-H``, ``--hourly`` option for details about ``COUNT``."
    "``-I``, ``--include=PATTERN``","Only process backups that match the shell pattern given by ``PATTERN``. This
    argument can be repeated. Make sure to quote ``PATTERN`` so the shell doesn't
    expand the pattern before it's received by rotate-backups."

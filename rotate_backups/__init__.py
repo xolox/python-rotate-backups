@@ -41,7 +41,7 @@ from six.moves import configparser
 from verboselogs import VerboseLogger
 
 # Semi-standard module versioning.
-__version__ = '4.1'
+__version__ = '4.2'
 
 # Initialize a logger for this module.
 logger = VerboseLogger(__name__)
@@ -52,11 +52,14 @@ GLOBAL_CONFIG_FILE = '/etc/rotate-backups.ini'
 LOCAL_CONFIG_FILE = '~/.rotate-backups.ini'
 """The pathname of the user specific configuration file (a string)."""
 
-ORDERED_FREQUENCIES = (('hourly', relativedelta(hours=1)),
-                       ('daily', relativedelta(days=1)),
-                       ('weekly', relativedelta(weeks=1)),
-                       ('monthly', relativedelta(months=1)),
-                       ('yearly', relativedelta(years=1)))
+ORDERED_FREQUENCIES = (
+    ('minutely', relativedelta(minutes=1)),
+    ('hourly', relativedelta(hours=1)),
+    ('daily', relativedelta(days=1)),
+    ('weekly', relativedelta(weeks=1)),
+    ('monthly', relativedelta(months=1)),
+    ('yearly', relativedelta(years=1)),
+)
 """
 A list of tuples with two values each:
 
@@ -314,8 +317,8 @@ class RotateBackups(PropertyManager):
         The rotation scheme to apply to backups (a dictionary).
 
         Each key in this dictionary defines a rotation frequency (one of the
-        strings 'hourly', 'daily', 'weekly', 'monthly' and 'yearly') and each
-        value defines a retention count:
+        strings 'minutely', 'hourly', 'daily', 'weekly', 'monthly' and
+        'yearly') and each value defines a retention count:
 
         - An integer value represents the number of backups to preserve in the
           given rotation frequency, starting from the most recent backup and
@@ -527,6 +530,7 @@ class RotateBackups(PropertyManager):
         """
         backups_by_frequency = dict((frequency, collections.defaultdict(list)) for frequency in SUPPORTED_FREQUENCIES)
         for b in backups:
+            backups_by_frequency['minutely'][(b.year, b.month, b.day, b.hour, b.minute)].append(b)
             backups_by_frequency['hourly'][(b.year, b.month, b.day, b.hour)].append(b)
             backups_by_frequency['daily'][(b.year, b.month, b.day)].append(b)
             backups_by_frequency['weekly'][(b.year, b.week)].append(b)

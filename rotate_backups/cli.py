@@ -29,6 +29,14 @@ intended you have no right to complain ;-).
 
 Supported options:
 
+  -M, --minutely=COUNT
+
+    In a literal sense this option sets the number of "backups per minute" to
+    preserve during rotation. For most use cases that doesn't make a lot of
+    sense :-) but you can combine the --minutely and --relaxed options to
+    preserve more than one backup per hour.  Refer to the usage of the -H,
+    --hourly option for details about COUNT.
+
   -H, --hourly=COUNT
 
     Set the number of hourly backups to preserve during rotation:
@@ -44,22 +52,22 @@ Supported options:
   -d, --daily=COUNT
 
     Set the number of daily backups to preserve during rotation. Refer to the
-    usage of the -H, --hourly option for details.
+    usage of the -H, --hourly option for details about COUNT.
 
   -w, --weekly=COUNT
 
     Set the number of weekly backups to preserve during rotation. Refer to the
-    usage of the -H, --hourly option for details.
+    usage of the -H, --hourly option for details about COUNT.
 
   -m, --monthly=COUNT
 
     Set the number of monthly backups to preserve during rotation. Refer to the
-    usage of the -H, --hourly option for details.
+    usage of the -H, --hourly option for details about COUNT.
 
   -y, --yearly=COUNT
 
     Set the number of yearly backups to preserve during rotation. Refer to the
-    usage of the -H, --hourly option for details.
+    usage of the -H, --hourly option for details about COUNT.
 
   -I, --include=PATTERN
 
@@ -186,13 +194,16 @@ def main():
     selected_locations = []
     # Parse the command line arguments.
     try:
-        options, arguments = getopt.getopt(sys.argv[1:], 'H:d:w:m:y:I:x:jpri:c:r:unvqh', [
-            'hourly=', 'daily=', 'weekly=', 'monthly=', 'yearly=', 'include=',
-            'exclude=', 'parallel', 'prefer-recent', 'relaxed', 'ionice=',
-            'config=', 'use-sudo', 'dry-run', 'verbose', 'quiet', 'help',
+        options, arguments = getopt.getopt(sys.argv[1:], 'M:H:d:w:m:y:I:x:jpri:c:r:unvqh', [
+            'minutely=', 'hourly=', 'daily=', 'weekly=', 'monthly=', 'yearly=',
+            'include=', 'exclude=', 'parallel', 'prefer-recent', 'relaxed',
+            'ionice=', 'config=', 'use-sudo', 'dry-run', 'verbose', 'quiet',
+            'help',
         ])
         for option, value in options:
-            if option in ('-H', '--hourly'):
+            if option in ('-M', '--minutely'):
+                rotation_scheme['minutely'] = coerce_retention_period(value)
+            elif option in ('-H', '--hourly'):
                 rotation_scheme['hourly'] = coerce_retention_period(value)
             elif option in ('-d', '--daily'):
                 rotation_scheme['daily'] = coerce_retention_period(value)

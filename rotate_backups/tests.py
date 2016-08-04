@@ -360,6 +360,17 @@ class RotateBackupsTestCase(unittest.TestCase):
             assert not os.path.exists(os.path.join(root, 'backup-2016-01-10_21-30-00'))
             assert os.path.exists(os.path.join(root, 'backup-2016-01-10_21-45-00'))
 
+    def test_minutely_rotation(self):
+        """Test rotation with multiple backups per hour."""
+        with TemporaryDirectory(prefix='rotate-backups-', suffix='-test-suite') as root:
+            os.mkdir(os.path.join(root, 'backup-2016-01-10_21-15-00'))
+            os.mkdir(os.path.join(root, 'backup-2016-01-10_21-30-00'))
+            os.mkdir(os.path.join(root, 'backup-2016-01-10_21-45-00'))
+            run_cli('--prefer-recent', '--relaxed', '--minutely=2', root)
+            assert not os.path.exists(os.path.join(root, 'backup-2016-01-10_21-15-00'))
+            assert os.path.exists(os.path.join(root, 'backup-2016-01-10_21-30-00'))
+            assert os.path.exists(os.path.join(root, 'backup-2016-01-10_21-45-00'))
+
     def create_sample_backup_set(self, root):
         """Create a sample backup set to be rotated."""
         for name in SAMPLE_BACKUP_SET:
