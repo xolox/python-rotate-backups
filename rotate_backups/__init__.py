@@ -1,7 +1,7 @@
 # rotate-backups: Simple command line interface for backup rotation.
 #
 # Author: Peter Odding <peter@peterodding.com>
-# Last Change: July 9, 2016
+# Last Change: August 4, 2016
 # URL: https://github.com/xolox/python-rotate-backups
 
 """
@@ -105,7 +105,7 @@ def coerce_location(value, **options):
             options['ssh_alias'] = ssh_alias
         else:
             directory = value
-        # Construct the location object.
+        # Create the location object.
         value = Location(
             context=create_context(**options),
             directory=parse_path(directory),
@@ -201,7 +201,7 @@ def rotate_backups(directory, rotation_scheme, include_list=None, exclude_list=N
     .. note:: This function exists to preserve backwards compatibility with
               older versions of the `rotate-backups` package where all of the
               logic was exposed as a single function. Please refer to the
-              documentation of the :class:`RotateBackups` constructor and the
+              documentation of the :class:`RotateBackups` initializer and the
               :func:`~RotateBackups.rotate_backups()` method for an explanation
               of this function's parameters.
     """
@@ -222,7 +222,7 @@ class RotateBackups(object):
                  dry_run=False, io_scheduling_class=None, config_file=None,
                  strict=True):
         """
-        Construct a :class:`RotateBackups` object.
+        Initialize a :class:`RotateBackups` object.
 
         :param rotation_scheme: A dictionary with one or more of the keys 'hourly',
                                 'daily', 'weekly', 'monthly', 'yearly'. Each key is
