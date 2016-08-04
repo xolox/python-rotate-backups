@@ -1,7 +1,7 @@
 # rotate-backups: Simple command line interface for backup rotation.
 #
 # Author: Peter Odding <peter@peterodding.com>
-# Last Change: July 9, 2016
+# Last Change: August 5, 2016
 # URL: https://github.com/xolox/python-rotate-backups
 
 """
@@ -172,15 +172,10 @@ def main():
     """Command line interface for the ``rotate-backups`` program."""
     coloredlogs.install(syslog=True)
     # Command line option defaults.
-    config_file = None
-    dry_run = False
-    exclude_list = []
-    include_list = []
-    io_scheduling_class = None
-    parallel = False
     rotation_scheme = {}
+    kw = dict(include_list=[], exclude_list=[])
+    parallel = False
     use_sudo = False
-    strict = True
     # Internal state.
     selected_locations = []
     # Parse the command line arguments.
@@ -202,27 +197,27 @@ def main():
             elif option in ('-y', '--yearly'):
                 rotation_scheme['yearly'] = coerce_retention_period(value)
             elif option in ('-I', '--include'):
-                include_list.append(value)
+                kw['include_list'].append(value)
             elif option in ('-x', '--exclude'):
-                exclude_list.append(value)
+                kw['exclude_list'].append(value)
             elif option in ('-j', '--parallel'):
                 parallel = True
             elif option in ('-r', '--relaxed'):
-                strict = False
+                kw['strict'] = False
             elif option in ('-i', '--ionice'):
                 value = value.lower().strip()
                 expected = ('idle', 'best-effort', 'realtime')
                 if value not in expected:
                     msg = "Invalid I/O scheduling class! (got %r while valid options are %s)"
                     raise Exception(msg % (value, concatenate(expected)))
-                io_scheduling_class = value
+                kw['io_scheduling_class'] = value
             elif option in ('-c', '--config'):
-                config_file = parse_path(value)
+                kw['config_file'] = parse_path(value)
             elif option in ('-u', '--use-sudo'):
                 use_sudo = True
             elif option in ('-n', '--dry-run'):
                 logger.info("Performing a dry run (because of %s option) ..", option)
-                dry_run = True
+                kw['dry_run'] = True
             elif option in ('-v', '--verbose'):
                 coloredlogs.increase_verbosity()
             elif option in ('-q', '--quiet'):
@@ -236,12 +231,16 @@ def main():
             logger.verbose("Rotation scheme defined on command line: %s", rotation_scheme)
         if arguments:
             # Rotation of the locations given on the command line.
-            selected_locations.extend(coerce_location(value, sudo=use_sudo) for value in arguments)
             location_source = 'command line arguments'
+            selected_locations.extend(coerce_location(value, sudo=use_sudo) for value in arguments)
         else:
             # Rotation of all configured locations.
-            selected_locations.extend(location for location, rotation_scheme, options in load_config_file(config_file))
             location_source = 'configuration file'
+            selected_locations.extend(
+                location
+                for location, rotation_scheme, options
+                in load_config_file(kw.get('config_file'))
+            )
         # Inform the user which location(s) will be rotated.
         if selected_locations:
             logger.verbose("Selected %s based on %s:",
@@ -258,15 +257,7 @@ def main():
         logger.error("%s", e)
         sys.exit(1)
     # Rotate the backups in the selected directories.
-    program = RotateBackups(
-        config_file=config_file,
-        dry_run=dry_run,
-        exclude_list=exclude_list,
-        include_list=include_list,
-        io_scheduling_class=io_scheduling_class,
-        rotation_scheme=rotation_scheme,
-        strict=strict,
-    )
+    program = RotateBackups(rotation_scheme, **kw)
     if parallel:
         program.rotate_concurrent(*selected_locations)
     else:
