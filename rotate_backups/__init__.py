@@ -292,13 +292,21 @@ class RotateBackups(PropertyManager):
         """
         The I/O scheduling class for backup rotation (a string or :data:`None`).
 
-        When this property is set then ``ionice`` will be used to set the I/O
-        scheduling class for backup rotation. This can be useful to reduce the
-        impact of backup rotation on the rest of the system.
+        When this property is set (and :attr:`have_ionice` is :data:`True`)
+        then ionice_ will be used to set the I/O scheduling class for backup
+        rotation. This can be useful to reduce the impact of backup rotation on
+        the rest of the system.
 
         The value of this property is expected to be one of the strings 'idle',
         'best-effort' or 'realtime'.
+
+        .. _ionice: https://linux.die.net/man/1/ionice
         """
+
+    @cached_property
+    def have_ionice(self):
+        """:data:`True` when ionice_ is available, :data:`False` otherwise."""
+        return self.context.test('which', 'ionice')
 
     @mutable_property
     def prefer_recent(self):
@@ -452,7 +460,7 @@ class RotateBackups(PropertyManager):
                 logger.info("Deleting %s ..", format_path(backup.pathname))
                 if not self.dry_run:
                     command_line = ['rm', '-Rf', backup.pathname]
-                    if self.io_scheduling_class:
+                    if self.io_scheduling_class and self.have_ionice:
                         command_line = ['ionice', '--class', self.io_scheduling_class] + command_line
                     group_by = (location.ssh_alias, location.mount_point)
                     command = location.context.prepare(*command_line, group_by=group_by)
@@ -629,7 +637,7 @@ class Location(PropertyManager):
         implementation is rather bare bones compared to GNU/Linux.
         """
         try:
-            return self.context.capture('stat', '--format=%m', self.directory)
+            return self.context.capture('stat', '--format=%m', self.directory, silent=True)
         except ExternalCommandFailed:
             return None
 
