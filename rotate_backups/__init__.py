@@ -1,7 +1,7 @@
 # rotate-backups: Simple command line interface for backup rotation.
 #
 # Author: Peter Odding <peter@peterodding.com>
-# Last Change: August 5, 2016
+# Last Change: October 31, 2016
 # URL: https://github.com/xolox/python-rotate-backups
 
 """
@@ -22,6 +22,7 @@ import re
 
 # External dependencies.
 from dateutil.relativedelta import relativedelta
+from executor import ExternalCommandFailed
 from executor.concurrent import CommandPool
 from executor.contexts import RemoteContext, create_context
 from humanfriendly import Timer, coerce_boolean, format_path, parse_path, pluralize
@@ -619,8 +620,18 @@ class Location(PropertyManager):
 
     @lazy_property
     def mount_point(self):
-        """The pathname of the mount point of :attr:`directory` (a string)."""
-        return self.context.capture('stat', '--format=%m', self.directory)
+        """
+        The pathname of the mount point of :attr:`directory` (a string or :data:`None`).
+
+        If the ``stat --format=%m ...`` command that is used to determine the
+        mount point fails, the value of this property defaults to :data:`None`.
+        This enables graceful degradation on e.g. Mac OS X whose ``stat``
+        implementation is rather bare bones compared to GNU/Linux.
+        """
+        try:
+            return self.context.capture('stat', '--format=%m', self.directory)
+        except ExternalCommandFailed:
+            return None
 
     @lazy_property
     def is_remote(self):
