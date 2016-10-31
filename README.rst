@@ -31,7 +31,8 @@ in a properly documented Python package and upload it to the `Python Package
 Index`_.
 
 The `rotate-backups` package is currently tested on cPython 2.6, 2.7, 3.4, 3.5
-and PyPy (2.7).
+and PyPy (2.7). It's tested on Linux and Mac OS X and may work on other unixes
+but definitely won't work on Windows right now.
 
 .. contents::
    :local:
