@@ -42,7 +42,7 @@ from six.moves import configparser
 from verboselogs import VerboseLogger
 
 # Semi-standard module versioning.
-__version__ = '4.3.1'
+__version__ = '4.4'
 
 # Initialize a logger for this module.
 logger = VerboseLogger(__name__)
