@@ -454,11 +454,11 @@ class RotateBackups(PropertyManager):
             else:
                 logger.info("Deleting %s ..", format_path(backup.pathname))
                 if not self.dry_run:
-                    command_line = ['rm', '-Rf', backup.pathname]
-                    if self.io_scheduling_class and location.have_ionice:
-                        command_line = ['ionice', '--class', self.io_scheduling_class] + command_line
-                    group_by = (location.ssh_alias, location.mount_point)
-                    command = location.context.prepare(*command_line, group_by=group_by)
+                    command = location.context.prepare(
+                        'rm', '-Rf', backup.pathname,
+                        group_by=(location.ssh_alias, location.mount_point),
+                        ionice=self.io_scheduling_class,
+                    )
                     rotation_commands.append(command)
                     if not prepare:
                         timer = Timer()
@@ -624,7 +624,7 @@ class Location(PropertyManager):
     @lazy_property
     def have_ionice(self):
         """:data:`True` when ionice_ is available, :data:`False` otherwise."""
-        return self.context.test('which', 'ionice')
+        return self.context.have_ionice
 
     @lazy_property
     def mount_point(self):

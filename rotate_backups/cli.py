@@ -1,7 +1,7 @@
 # rotate-backups: Simple command line interface for backup rotation.
 #
 # Author: Peter Odding <peter@peterodding.com>
-# Last Change: August 5, 2016
+# Last Change: April 13, 2017
 # URL: https://github.com/xolox/python-rotate-backups
 
 """
@@ -166,7 +166,8 @@ import sys
 
 # External dependencies.
 import coloredlogs
-from humanfriendly import concatenate, parse_path, pluralize
+from executor import validate_ionice_class
+from humanfriendly import parse_path, pluralize
 from humanfriendly.terminal import usage
 from verboselogs import VerboseLogger
 
@@ -224,11 +225,7 @@ def main():
             elif option in ('-r', '--relaxed'):
                 kw['strict'] = False
             elif option in ('-i', '--ionice'):
-                value = value.lower().strip()
-                expected = ('idle', 'best-effort', 'realtime')
-                if value not in expected:
-                    msg = "Invalid I/O scheduling class! (got %r while valid options are %s)"
-                    raise Exception(msg % (value, concatenate(expected)))
+                value = validate_ionice_class(value.lower().strip())
                 kw['io_scheduling_class'] = value
             elif option in ('-c', '--config'):
                 kw['config_file'] = parse_path(value)
