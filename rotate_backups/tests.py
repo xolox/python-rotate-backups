@@ -1,7 +1,7 @@
 # Test suite for the `rotate-backups' Python package.
 #
 # Author: Peter Odding <peter@peterodding.com>
-# Last Change: August 5, 2016
+# Last Change: June 24, 2017
 # URL: https://github.com/xolox/python-rotate-backups
 
 """Test suite for the `rotate-backups` package."""
@@ -9,14 +9,10 @@
 # Standard library modules.
 import logging
 import os
-import shutil
-import sys
-import tempfile
-import unittest
 
 # External dependencies.
-import coloredlogs
 from executor.contexts import RemoteContext
+from humanfriendly.testing import TemporaryDirectory, TestCase, run_cli
 from six.moves import configparser
 
 # The module we're testing.
@@ -89,13 +85,9 @@ SAMPLE_BACKUP_SET = set([
 ])
 
 
-class RotateBackupsTestCase(unittest.TestCase):
+class RotateBackupsTestCase(TestCase):
 
     """:mod:`unittest` compatible container for `rotate-backups` tests."""
-
-    def setUp(self):
-        """Enable verbose logging for the test suite."""
-        coloredlogs.install(level=logging.DEBUG)
 
     def test_retention_period_coercion(self):
         """Test coercion of retention period expressions."""
@@ -123,13 +115,15 @@ class RotateBackupsTestCase(unittest.TestCase):
     def test_argument_validation(self):
         """Test argument validation."""
         # Test that an invalid ionice scheduling class causes an error to be reported.
-        assert run_cli('--ionice=unsupported-class') != 0
+        returncode, output = run_cli(main, '--ionice=unsupported-class')
+        assert returncode != 0
         # Test that an invalid rotation scheme causes an error to be reported.
-        assert run_cli('--hourly=not-a-number') != 0
+        returncode, output = run_cli(main, '--hourly=not-a-number')
+        assert returncode != 0
         # Argument validation tests that require an empty directory.
         with TemporaryDirectory(prefix='rotate-backups-', suffix='-test-suite') as root:
             # Test that non-existing directories cause an error to be reported.
-            self.assertRaises(ValueError, lambda: run_cli(os.path.join(root, 'does-not-exist')))
+            self.assertRaises(ValueError, run_cli, main, os.path.join(root, 'does-not-exist'))
             # Test that loading of a custom configuration file raises an
             # exception when the configuration file cannot be loaded.
             self.assertRaises(ValueError, lambda: list(load_config_file(os.path.join(root, 'rotate-backups.ini'))))
@@ -141,15 +135,17 @@ class RotateBackupsTestCase(unittest.TestCase):
             # I'm being lazy and will assume that this test suite will only be
             # run on systems where users other than root do not have access to
             # /root.
-            self.assertRaises(ValueError, lambda: run_cli('-n', '/root'))
+            self.assertRaises(ValueError, run_cli, main, '-n', '/root')
 
     def test_dry_run(self):
         """Make sure dry run doesn't remove any backups."""
         with TemporaryDirectory(prefix='rotate-backups-', suffix='-test-suite') as root:
             self.create_sample_backup_set(root)
             run_cli(
-                '--dry-run', '--verbose', '--daily=7', '--weekly=7',
-                '--monthly=12', '--yearly=always', root,
+                main, '--dry-run', '--verbose',
+                '--daily=7', '--weekly=7',
+                '--monthly=12', '--yearly=always',
+                root,
             )
             backups_that_were_preserved = set(os.listdir(root))
             assert backups_that_were_preserved == SAMPLE_BACKUP_SET
@@ -197,7 +193,7 @@ class RotateBackupsTestCase(unittest.TestCase):
             with open(config_file, 'w') as handle:
                 parser.write(handle)
             self.create_sample_backup_set(root)
-            run_cli('--verbose', '--config=%s' % config_file)
+            run_cli(main, '--verbose', '--config=%s' % config_file)
             backups_that_were_preserved = set(os.listdir(root))
             assert backups_that_were_preserved == expected_to_be_preserved
 
@@ -230,7 +226,7 @@ class RotateBackupsTestCase(unittest.TestCase):
         with TemporaryDirectory(prefix='rotate-backups-', suffix='-test-suite') as root:
             self.create_sample_backup_set(root)
             run_cli(
-                '--verbose', '--hourly=24', '--daily=7', '--weekly=4',
+                main, '--verbose', '--hourly=24', '--daily=7', '--weekly=4',
                 '--monthly=12', '--yearly=always', '--parallel', root,
             )
             backups_that_were_preserved = set(os.listdir(root))
@@ -266,7 +262,7 @@ class RotateBackupsTestCase(unittest.TestCase):
         with TemporaryDirectory(prefix='rotate-backups-', suffix='-test-suite') as root:
             self.create_sample_backup_set(root)
             run_cli(
-                '--verbose', '--ionice=idle', '--hourly=24', '--daily=7',
+                main, '--verbose', '--ionice=idle', '--hourly=24', '--daily=7',
                 '--weekly=4', '--monthly=12', '--yearly=always',
                 '--include=2014-*', root,
             )
@@ -309,7 +305,7 @@ class RotateBackupsTestCase(unittest.TestCase):
         with TemporaryDirectory(prefix='rotate-backups-', suffix='-test-suite') as root:
             self.create_sample_backup_set(root)
             run_cli(
-                '--verbose', '--ionice=idle', '--hourly=24', '--daily=7',
+                main, '--verbose', '--ionice=idle', '--hourly=24', '--daily=7',
                 '--weekly=4', '--monthly=12', '--yearly=always',
                 '--exclude=2014-05-*', root,
             )
@@ -322,7 +318,7 @@ class RotateBackupsTestCase(unittest.TestCase):
             os.mkdir(os.path.join(root, 'galera_backup_db4.sl.example.lab_2016-03-17_10-00'))
             os.mkdir(os.path.join(root, 'galera_backup_db4.sl.example.lab_2016-03-17_12-00'))
             os.mkdir(os.path.join(root, 'galera_backup_db4.sl.example.lab_2016-03-17_16-00'))
-            run_cli('--hourly=3', '--daily=1', root)
+            run_cli(main, '--hourly=3', '--daily=1', root)
             assert os.path.exists(os.path.join(root, 'galera_backup_db4.sl.example.lab_2016-03-17_10-00'))
             assert os.path.exists(os.path.join(root, 'galera_backup_db4.sl.example.lab_2016-03-17_12-00')) is False
             assert os.path.exists(os.path.join(root, 'galera_backup_db4.sl.example.lab_2016-03-17_16-00'))
@@ -333,7 +329,7 @@ class RotateBackupsTestCase(unittest.TestCase):
             os.mkdir(os.path.join(root, 'galera_backup_db4.sl.example.lab_2016-03-17_10-00'))
             os.mkdir(os.path.join(root, 'galera_backup_db4.sl.example.lab_2016-03-17_12-00'))
             os.mkdir(os.path.join(root, 'galera_backup_db4.sl.example.lab_2016-03-17_16-00'))
-            run_cli('--hourly=3', '--daily=1', '--relaxed', root)
+            run_cli(main, '--hourly=3', '--daily=1', '--relaxed', root)
             assert os.path.exists(os.path.join(root, 'galera_backup_db4.sl.example.lab_2016-03-17_10-00'))
             assert os.path.exists(os.path.join(root, 'galera_backup_db4.sl.example.lab_2016-03-17_12-00'))
             assert os.path.exists(os.path.join(root, 'galera_backup_db4.sl.example.lab_2016-03-17_16-00'))
@@ -344,7 +340,7 @@ class RotateBackupsTestCase(unittest.TestCase):
             os.mkdir(os.path.join(root, 'backup-2016-01-10_21-15-00'))
             os.mkdir(os.path.join(root, 'backup-2016-01-10_21-30-00'))
             os.mkdir(os.path.join(root, 'backup-2016-01-10_21-45-00'))
-            run_cli('--hourly=1', root)
+            run_cli(main, '--hourly=1', root)
             assert os.path.exists(os.path.join(root, 'backup-2016-01-10_21-15-00'))
             assert not os.path.exists(os.path.join(root, 'backup-2016-01-10_21-30-00'))
             assert not os.path.exists(os.path.join(root, 'backup-2016-01-10_21-45-00'))
@@ -355,7 +351,7 @@ class RotateBackupsTestCase(unittest.TestCase):
             os.mkdir(os.path.join(root, 'backup-2016-01-10_21-15-00'))
             os.mkdir(os.path.join(root, 'backup-2016-01-10_21-30-00'))
             os.mkdir(os.path.join(root, 'backup-2016-01-10_21-45-00'))
-            run_cli('--hourly=1', '--prefer-recent', root)
+            run_cli(main, '--hourly=1', '--prefer-recent', root)
             assert not os.path.exists(os.path.join(root, 'backup-2016-01-10_21-15-00'))
             assert not os.path.exists(os.path.join(root, 'backup-2016-01-10_21-30-00'))
             assert os.path.exists(os.path.join(root, 'backup-2016-01-10_21-45-00'))
@@ -366,7 +362,7 @@ class RotateBackupsTestCase(unittest.TestCase):
             os.mkdir(os.path.join(root, 'backup-2016-01-10_21-15-00'))
             os.mkdir(os.path.join(root, 'backup-2016-01-10_21-30-00'))
             os.mkdir(os.path.join(root, 'backup-2016-01-10_21-45-00'))
-            run_cli('--prefer-recent', '--relaxed', '--minutely=2', root)
+            run_cli(main, '--prefer-recent', '--relaxed', '--minutely=2', root)
             assert not os.path.exists(os.path.join(root, 'backup-2016-01-10_21-15-00'))
             assert os.path.exists(os.path.join(root, 'backup-2016-01-10_21-30-00'))
             assert os.path.exists(os.path.join(root, 'backup-2016-01-10_21-45-00'))
@@ -375,55 +371,3 @@ class RotateBackupsTestCase(unittest.TestCase):
         """Create a sample backup set to be rotated."""
         for name in SAMPLE_BACKUP_SET:
             os.mkdir(os.path.join(root, name))
-
-
-def run_cli(*arguments):
-    """Simple wrapper to run :func:`rotate_backups.cli.main()` in the same process."""
-    # Temporarily replace sys.argv.
-    saved_arguments = sys.argv
-    sys.argv = ['rotate-backups'] + list(arguments)
-    try:
-        main()
-        exit_code = 0
-    except SystemExit as e:
-        exit_code = e.code
-    finally:
-        # Restore sys.argv before we return.
-        sys.argv = saved_arguments
-    return exit_code
-
-
-class TemporaryDirectory(object):
-
-    """
-    Easy temporary directory creation & cleanup using the :keyword:`with` statement.
-
-    Here's an example of how to use this:
-
-    .. code-block:: python
-
-       with TemporaryDirectory() as directory:
-           # Do something useful here.
-           assert os.path.isdir(directory)
-    """
-
-    def __init__(self, **options):
-        """
-        Initialize context manager that manages creation & cleanup of temporary directory.
-
-        :param options: Any keyword arguments are passed on to
-                        :func:`tempfile.mkdtemp()`.
-        """
-        self.options = options
-
-    def __enter__(self):
-        """Create the temporary directory."""
-        self.temporary_directory = tempfile.mkdtemp(**self.options)
-        logger.debug("Created temporary directory: %s", self.temporary_directory)
-        return self.temporary_directory
-
-    def __exit__(self, exc_type, exc_value, traceback):
-        """Destroy the temporary directory."""
-        logger.debug("Cleaning up temporary directory: %s", self.temporary_directory)
-        shutil.rmtree(self.temporary_directory)
-        del self.temporary_directory
