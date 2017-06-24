@@ -106,13 +106,23 @@ Command line
 
 Easy rotation of backups based on the Python package by the same name.
 
-To use this program you specify a rotation scheme via (a combination of) the ``--hourly``, ``--daily``, ``--weekly``, ``--monthly`` and/or ``--yearly`` options and the directory (or directories) containing backups to rotate as one or more positional arguments.
+To use this program you specify a rotation scheme via (a combination of) the
+``--hourly``, ``--daily``, ``--weekly``, ``--monthly`` and/or ``--yearly`` options and the
+directory (or directories) containing backups to rotate as one or more
+positional arguments.
 
-You can rotate backups on a remote system over SSH by prefixing a DIRECTORY with an SSH alias and separating the two with a colon (similar to how rsync accepts remote locations).
+You can rotate backups on a remote system over SSH by prefixing a DIRECTORY
+with an SSH alias and separating the two with a colon (similar to how rsync
+accepts remote locations).
 
-Instead of specifying directories and a rotation scheme on the command line you can also add them to a configuration file. For more details refer to the online documentation (see also the ``--config`` option).
+Instead of specifying directories and a rotation scheme on the command line you
+can also add them to a configuration file. For more details refer to the online
+documentation (see also the ``--config`` option).
 
-Please use the ``--dry-run`` option to test the effect of the specified rotation scheme before letting this program loose on your precious backups! If you don't test the results using the dry run mode and this program eats more backups than intended you have no right to complain ;-).
+Please use the ``--dry-run`` option to test the effect of the specified rotation
+scheme before letting this program loose on your precious backups! If you don't
+test the results using the dry run mode and this program eats more backups than
+intended you have no right to complain ;-).
 
 **Supported options:**
 
@@ -194,10 +204,9 @@ Please use the ``--dry-run`` option to test the effect of the specified rotation
    remote system over SSH)."
    "``-n``, ``--dry-run``","Don't make any changes, just print what would be done. This makes it easy
    to evaluate the impact of a rotation scheme without losing any backups."
-   "``-v``, ``--verbose``",Make more noise (increase logging verbosity). Can be repeated.
-   "``-q``, ``--quiet``",Make less noise (decrease logging verbosity). Can be repeated.
-   "``-h``, ``--help``","Show this message and exit.
-   "
+   "``-v``, ``--verbose``",Increase logging verbosity (can be repeated).
+   "``-q``, ``--quiet``",Decrease logging verbosity (can be repeated).
+   "``-h``, ``--help``",Show this message and exit.
 
 .. [[[end]]]
 

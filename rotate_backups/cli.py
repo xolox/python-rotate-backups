@@ -1,7 +1,7 @@
 # rotate-backups: Simple command line interface for backup rotation.
 #
 # Author: Peter Odding <peter@peterodding.com>
-# Last Change: April 13, 2017
+# Last Change: June 24, 2017
 # URL: https://github.com/xolox/python-rotate-backups
 
 """
@@ -149,11 +149,11 @@ Supported options:
 
   -v, --verbose
 
-    Make more noise (increase logging verbosity). Can be repeated.
+    Increase logging verbosity (can be repeated).
 
   -q, --quiet
 
-    Make less noise (decrease logging verbosity). Can be repeated.
+    Decrease logging verbosity (can be repeated).
 
   -h, --help
 
