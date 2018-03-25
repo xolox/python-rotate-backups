@@ -1,8 +1,3 @@
-# .coveragerc: Configuration file for coverage.py.
-# http://nedbatchelder.com/code/coverage/
-
 [run]
 source = rotate_backups
 omit = rotate_backups/tests.py
-
-# vim: ft=dosini
