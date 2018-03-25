@@ -1,7 +1,7 @@
 # Test suite for the `rotate-backups' Python package.
 #
 # Author: Peter Odding <peter@peterodding.com>
-# Last Change: June 24, 2017
+# Last Change: March 25, 2018
 # URL: https://github.com/xolox/python-rotate-backups
 
 """Test suite for the `rotate-backups` package."""
@@ -123,7 +123,8 @@ class RotateBackupsTestCase(TestCase):
         # Argument validation tests that require an empty directory.
         with TemporaryDirectory(prefix='rotate-backups-', suffix='-test-suite') as root:
             # Test that non-existing directories cause an error to be reported.
-            self.assertRaises(ValueError, run_cli, main, os.path.join(root, 'does-not-exist'))
+            returncode, output = run_cli(main, os.path.join(root, 'does-not-exist'))
+            assert returncode != 0
             # Test that loading of a custom configuration file raises an
             # exception when the configuration file cannot be loaded.
             self.assertRaises(ValueError, lambda: list(load_config_file(os.path.join(root, 'rotate-backups.ini'))))
@@ -135,7 +136,8 @@ class RotateBackupsTestCase(TestCase):
             # I'm being lazy and will assume that this test suite will only be
             # run on systems where users other than root do not have access to
             # /root.
-            self.assertRaises(ValueError, run_cli, main, '-n', '/root')
+            returncode, output = run_cli(main, '-n', '/root')
+            assert returncode != 0
 
     def test_dry_run(self):
         """Make sure dry run doesn't remove any backups."""
