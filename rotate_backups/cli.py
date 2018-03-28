@@ -1,7 +1,7 @@
 # rotate-backups: Simple command line interface for backup rotation.
 #
 # Author: Peter Odding <peter@peterodding.com>
-# Last Change: June 24, 2017
+# Last Change: March 25, 2018
 # URL: https://github.com/xolox/python-rotate-backups
 
 """
@@ -129,12 +129,19 @@ Supported options:
     the values `idle', `best-effort' or `realtime'. Refer to the man page of
     the `ionice' program for details about these values.
 
-  -c, --config=PATH
+  -c, --config=FILENAME
 
-    Load configuration from the pathname given by PATH. If this option isn't
-    given two default locations are checked: `~/.rotate-backups.ini' and
-    `/etc/rotate-backups.ini'. The first of these two configuration files to
-    exist is loaded. For more details refer to the online documentation.
+    Load configuration from FILENAME. If this option isn't given the following
+    default locations are searched for configuration files:
+
+    - /etc/rotate-backups.ini and /etc/rotate-backups.d/*.ini
+    - ~/.rotate-backups.ini and ~/.rotate-backups.d/*.ini
+    - ~/.config/rotate-backups.ini and ~/.config/rotate-backups.d/*.ini
+
+    Any available configuration files are loaded in the order given above, so
+    that sections in user-specific configuration files override sections by the
+    same name in system-wide configuration files. For more details refer to the
+    online documentation.
 
   -u, --use-sudo
 

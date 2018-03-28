@@ -1,7 +1,7 @@
 # rotate-backups: Simple command line interface for backup rotation.
 #
 # Author: Peter Odding <peter@peterodding.com>
-# Last Change: April 13, 2017
+# Last Change: March 29, 2018
 # URL: https://github.com/xolox/python-rotate-backups
 
 """
@@ -38,7 +38,7 @@ from property_manager import (
 )
 from simpleeval import simple_eval
 from six import string_types
-from six.moves import configparser
+from update_dotdee import ConfigLoader
 from verboselogs import VerboseLogger
 
 # Semi-standard module versioning.
@@ -46,12 +46,6 @@ __version__ = '4.4'
 
 # Initialize a logger for this module.
 logger = VerboseLogger(__name__)
-
-GLOBAL_CONFIG_FILE = '/etc/rotate-backups.ini'
-"""The pathname of the system wide configuration file (a string)."""
-
-LOCAL_CONFIG_FILE = '~/.rotate-backups.ini'
-"""The pathname of the user specific configuration file (a string)."""
 
 ORDERED_FREQUENCIES = (
     ('minutely', relativedelta(minutes=1)),
@@ -167,27 +161,26 @@ def load_config_file(configuration_file=None):
     :raises: :exc:`~exceptions.ValueError` when `configuration_file` is given
              but doesn't exist or can't be loaded.
 
-    When `configuration_file` isn't given :data:`LOCAL_CONFIG_FILE` and
-    :data:`GLOBAL_CONFIG_FILE` are checked and the first configuration file
-    that exists is loaded. This function is used by :class:`RotateBackups` to
-    discover user defined rotation schemes and by :mod:`rotate_backups.cli` to
-    discover directories for which backup rotation is configured.
+    This function is used by :class:`RotateBackups` to discover user defined
+    rotation schemes and by :mod:`rotate_backups.cli` to discover directories
+    for which backup rotation is configured. When `configuration_file` isn't
+    given :class:`~update_dotdee.ConfigLoader` is used to search for
+    configuration files in the following locations:
+
+    - ``/etc/rotate-backups.ini`` and ``/etc/rotate-backups.d/*.ini``
+    - ``~/.rotate-backups.ini`` and ``~/.rotate-backups.d/*.ini``
+    - ``~/.config/rotate-backups.ini`` and ``~/.config/rotate-backups.d/*.ini``
+
+    All of the available configuration files are loaded in the order given
+    above, so that sections in user-specific configuration files override
+    sections by the same name in system-wide configuration files.
     """
-    parser = configparser.RawConfigParser()
     if configuration_file:
-        logger.verbose("Reading configuration file %s ..", format_path(configuration_file))
-        loaded_files = parser.read(configuration_file)
-        if len(loaded_files) == 0:
-            msg = "Failed to read configuration file! (%s)"
-            raise ValueError(msg % configuration_file)
+        loader = ConfigLoader(available_files=[configuration_file], strict=True)
     else:
-        for config_file in LOCAL_CONFIG_FILE, GLOBAL_CONFIG_FILE:
-            pathname = parse_path(config_file)
-            if parser.read(pathname):
-                logger.verbose("Reading configuration file %s ..", format_path(pathname))
-                break
-    for section in parser.sections():
-        items = dict(parser.items(section))
+        loader = ConfigLoader(program_name='rotate-backups', strict=False)
+    for section in loader.section_names:
+        items = dict(loader.get_options(section))
         context_options = {}
         if coerce_boolean(items.get('use-sudo')):
             context_options['sudo'] = True
@@ -408,8 +401,8 @@ class RotateBackups(PropertyManager):
         :param prepare: If this is :data:`True` (not the default) then
                         :func:`rotate_backups()` will prepare the required
                         rotation commands without running them.
-        :returns: A list with the rotation commands (:class:`ExternalCommand`
-                  objects).
+        :returns: A list with the rotation commands
+                  (:class:`~executor.ExternalCommand` objects).
         :raises: :exc:`~exceptions.ValueError` when the given location doesn't
                  exist, isn't readable or isn't writable. The third check is
                  only performed when dry run isn't enabled.

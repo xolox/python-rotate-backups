@@ -195,10 +195,17 @@ intended you have no right to complain ;-).
    the ""rm"" invocations used to remove backups. ``CLASS`` is expected to be one of
    the values ""idle"", ""best-effort"" or ""realtime"". Refer to the man page of
    the ""ionice"" program for details about these values."
-   "``-c``, ``--config=PATH``","Load configuration from the pathname given by ``PATH``. If this option isn't
-   given two default locations are checked: ""~/.rotate-backups.ini"" and
-   ""/etc/rotate-backups.ini"". The first of these two configuration files to
-   exist is loaded. For more details refer to the online documentation."
+   "``-c``, ``--config=FILENAME``","Load configuration from ``FILENAME``. If this option isn't given the following
+   default locations are searched for configuration files:
+   
+   - /etc/rotate-backups.ini and /etc/rotate-backups.d/\*.ini
+   - ~/.rotate-backups.ini and ~/.rotate-backups.d/\*.ini
+   - ~/.config/rotate-backups.ini and ~/.config/rotate-backups.d/\*.ini
+   
+   Any available configuration files are loaded in the order given above, so
+   that sections in user-specific configuration files override sections by the
+   same name in system-wide configuration files. For more details refer to the
+   online documentation."
    "``-u``, ``--use-sudo``","Enable the use of ""sudo"" to rotate backups in directories that are not
    readable and/or writable for the current user (or the user logged in to a
    remote system over SSH)."
@@ -216,16 +223,38 @@ Configuration files
 Instead of specifying directories and rotation schemes on the command line you
 can also add them to a configuration file.
 
-By default two locations are checked for a configuration file, these are
-``~/.rotate-backups.ini`` and ``/etc/rotate-backups.ini``. The first of these
-that exists is loaded. You can load a configuration file in a nonstandard
-location using the command line option ``--config``.
+.. [[[cog
+.. from update_dotdee import inject_documentation
+.. inject_documentation(program_name='rotate-backups')
+.. ]]]
 
-Configuration files use the familiar INI syntax. Each section defines a
-directory that contains backups to be rotated. The options in each section
-define the rotation scheme and other options. Here's an example based on how I
-use `rotate-backups` to rotate the backups of the Linux installations that I
-make regular backups of:
+Configuration files are text files in the subset of `ini syntax`_ supported by
+Python's configparser_ module. They can be located in the following places:
+
+=========  ============================  =================================
+Directory  Main configuration file       Modular configuration files
+=========  ============================  =================================
+/etc       /etc/rotate-backups.ini       /etc/rotate-backups.d/\*.ini
+~          ~/.rotate-backups.ini         ~/.rotate-backups.d/\*.ini
+~/.config  ~/.config/rotate-backups.ini  ~/.config/rotate-backups.d/\*.ini
+=========  ============================  =================================
+
+The available configuration files are loaded in the order given above, so that
+user specific configuration files override system wide configuration files.
+
+.. _configparser: https://docs.python.org/3/library/configparser.html
+.. _ini syntax: https://en.wikipedia.org/wiki/INI_file
+
+.. [[[end]]]
+
+You can load a configuration file in a nonstandard location using the command
+line option ``--config``, in this case the default locations mentioned above
+are ignored.
+
+Each section in the configuration defines a directory that contains backups to
+be rotated. The options in each section define the rotation scheme and other
+options. Here's an example based on how I use `rotate-backups` to rotate the
+backups of the Linux installations that I make regular backups of:
 
 .. code-block:: ini
 
