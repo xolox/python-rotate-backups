@@ -11,6 +11,19 @@ to `semantic versioning`_.
 .. _Keep a Changelog: http://keepachangelog.com/
 .. _semantic versioning: http://semver.org/
 
+`Release 5.1`_ (2018-04-27)
+---------------------------
+
+- Properly document supported configuration options (`#7`_, `#8`_).
+- Properly document backup collection strategy (`#8`_).
+- Avoid ``u''`` prefixes in log output of include/exclude list processing.
+- Added this changelog, restructured the online documentation.
+- Added ``license`` key to ``setup.py`` script.
+
+.. _Release 5.1: https://github.com/xolox/python-rotate-backups/compare/5.0...5.1
+.. _#7: https://github.com/xolox/python-rotate-backups/issues/7
+.. _#8: https://github.com/xolox/python-rotate-backups/issues/8
+
 `Release 5.0`_ (2018-03-29)
 ---------------------------
 
