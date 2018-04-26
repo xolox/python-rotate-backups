@@ -343,6 +343,31 @@ options were added to expose the alternative behaviors:
 |                                     | option.                             |
 +-------------------------------------+-------------------------------------+
 
+Supported configuration options
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+- Rotation schemes are defined using the ``minutely``, ``hourly``, ``daily``,
+  ``weekly``, ``monthly`` and ``yearly`` options, these options support the
+  same values as documented for the command line interface.
+
+- The ``include-list`` and ``exclude-list`` options define a comma separated
+  list of filename patterns to include or exclude, respectively:
+
+  - Make sure *not* to quote the patterns in the configuration file,
+    just provide them literally.
+
+  - If an include or exclude list is defined in the configuration file it
+    overrides the include or exclude list given on the command line.
+
+- The ``prefer-recent``, ``strict`` and ``use-sudo`` options expect a boolean
+  value (``yes``, ``no``, ``true``, ``false``, ``1`` or ``0``).
+
+- The ``ionice`` option expects one of the I/O scheduling class names ``idle``,
+  ``best-effort`` or ``realtime``.
+
+- The ``ssh-user`` option can be used to override the name of the remote SSH
+  account that's used to connect to a remote system.
+
 Contact
 -------
 
