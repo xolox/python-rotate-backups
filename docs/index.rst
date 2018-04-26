@@ -1,22 +1,34 @@
-.. include:: ../README.rst
+rotate-backups: Simple command line interface for backup rotation
+=================================================================
 
-API documentation
-=================
-
-This documentation is based on the source code of version |release| of the
-`rotate-backups` package. The following modules are available:
+Welcome to the documentation of `rotate-backups` version |release|!
+The following sections are available:
 
 .. contents::
    :local:
 
-:mod:`rotate_backups`
----------------------
+User documentation
+------------------
 
-.. automodule:: rotate_backups
-   :members:
+The readme is the best place to start reading, it's targeted at all users and
+documents the command line interface:
 
-:mod:`rotate_backups.cli`
--------------------------
+.. toctree::
+   readme.rst
 
-.. automodule:: rotate_backups.cli
-   :members:
+API documentation
+-----------------
+
+The following API documentation is automatically generated from the source code:
+
+.. toctree::
+   api.rst
+
+Change log
+----------
+
+The change log lists notable changes to the project:
+
+.. toctree::
+   changelog.rst
+
