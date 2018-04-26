@@ -368,6 +368,28 @@ Supported configuration options
 - The ``ssh-user`` option can be used to override the name of the remote SSH
   account that's used to connect to a remote system.
 
+How it works
+------------
+
+The basic premise of `rotate-backups` is fairly simple:
+
+1. You point `rotate-backups` at a directory containing timestamped backups.
+
+2. It will scan the directory for entries (it doesn't matter whether they are
+   files or directories) with a recognizable timestamp in the name.
+
+   .. note:: All of the matched directory entries are considered to be backups
+             of the same data source, i.e. there's no filename similarity logic
+             to distinguish unrelated backups that are located in the same
+             directory. If this presents a problem consider using the
+             ``--include`` and/or ``--exclude`` options.
+
+3. The user defined rotation scheme is applied to the entries. If this doesn't
+   do what you'd expect it to you can try the ``--relaxed`` and/or
+   ``--prefer-recent`` options.
+
+4. The entries to rotate are removed (or printed in dry run).
+
 Contact
 -------
 
