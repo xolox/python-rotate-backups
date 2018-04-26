@@ -1,7 +1,7 @@
 # rotate-backups: Simple command line interface for backup rotation.
 #
 # Author: Peter Odding <peter@peterodding.com>
-# Last Change: March 29, 2018
+# Last Change: April 27, 2018
 # URL: https://github.com/xolox/python-rotate-backups
 
 """
@@ -499,9 +499,9 @@ class RotateBackups(PropertyManager):
             match = TIMESTAMP_PATTERN.search(entry)
             if match:
                 if self.exclude_list and any(fnmatch.fnmatch(entry, p) for p in self.exclude_list):
-                    logger.verbose("Excluded %r (it matched the exclude list).", entry)
+                    logger.verbose("Excluded %s (it matched the exclude list).", entry)
                 elif self.include_list and not any(fnmatch.fnmatch(entry, p) for p in self.include_list):
-                    logger.verbose("Excluded %r (it didn't match the include list).", entry)
+                    logger.verbose("Excluded %s (it didn't match the include list).", entry)
                 else:
                     backups.append(Backup(
                         pathname=os.path.join(location.directory, entry),
