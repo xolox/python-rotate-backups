@@ -3,7 +3,7 @@
 # Setup script for the `rotate-backups' package.
 #
 # Author: Peter Odding <peter@peterodding.com>
-# Last Change: March 25, 2018
+# Last Change: April 26, 2018
 # URL: https://github.com/xolox/python-rotate-backups
 
 """
@@ -66,6 +66,7 @@ setup(name="rotate-backups",
       url='https://github.com/xolox/python-rotate-backups',
       author="Peter Odding",
       author_email='peter@peterodding.com',
+      license='MIT',
       packages=find_packages(),
       entry_points=dict(console_scripts=[
           'rotate-backups = rotate_backups.cli:main',
