@@ -11,6 +11,16 @@ to `semantic versioning`_.
 .. _Keep a Changelog: http://keepachangelog.com/
 .. _semantic versioning: http://semver.org/
 
+`Release 5.2`_ (2018-04-27)
+---------------------------
+
+- Added support for filename patterns in configuration files (`#10`_).
+- Bug fix: Skip human friendly pathname formatting for remote backups.
+- Improved documentation using ``property_manager.sphinx`` module.
+
+.. _Release 5.2: https://github.com/xolox/python-rotate-backups/compare/5.1...5.2
+.. _#10: https://github.com/xolox/python-rotate-backups/issues/10
+
 `Release 5.1`_ (2018-04-27)
 ---------------------------
 
