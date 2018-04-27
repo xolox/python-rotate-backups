@@ -438,14 +438,17 @@ class RotateBackups(PropertyManager):
         backups_to_preserve = self.find_preservation_criteria(backups_by_frequency)
         # Apply the calculated rotation scheme.
         for backup in sorted_backups:
+            friendly_name = backup.pathname
+            if not location.is_remote:
+                # Use human friendly pathname formatting for local backups.
+                friendly_name = format_path(backup.pathname)
             if backup in backups_to_preserve:
                 matching_periods = backups_to_preserve[backup]
                 logger.info("Preserving %s (matches %s retention %s) ..",
-                            format_path(backup.pathname),
-                            concatenate(map(repr, matching_periods)),
+                            friendly_name, concatenate(map(repr, matching_periods)),
                             "period" if len(matching_periods) == 1 else "periods")
             else:
-                logger.info("Deleting %s ..", format_path(backup.pathname))
+                logger.info("Deleting %s ..", friendly_name)
                 if not self.dry_run:
                     command = location.context.prepare(
                         'rm', '-Rf', backup.pathname,
@@ -456,7 +459,7 @@ class RotateBackups(PropertyManager):
                     if not prepare:
                         timer = Timer()
                         command.wait()
-                        logger.verbose("Deleted %s in %s.", format_path(backup.pathname), timer)
+                        logger.verbose("Deleted %s in %s.", friendly_name, timer)
         if len(backups_to_preserve) == len(sorted_backups):
             logger.info("Nothing to do! (all backups preserved)")
         return rotation_commands
