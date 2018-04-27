@@ -1,7 +1,7 @@
 # Test suite for the `rotate-backups' Python package.
 #
 # Author: Peter Odding <peter@peterodding.com>
-# Last Change: March 25, 2018
+# Last Change: April 27, 2018
 # URL: https://github.com/xolox/python-rotate-backups
 
 """Test suite for the `rotate-backups` package."""
@@ -368,6 +368,28 @@ class RotateBackupsTestCase(TestCase):
             assert not os.path.exists(os.path.join(root, 'backup-2016-01-10_21-15-00'))
             assert os.path.exists(os.path.join(root, 'backup-2016-01-10_21-30-00'))
             assert os.path.exists(os.path.join(root, 'backup-2016-01-10_21-45-00'))
+
+    def test_filename_patterns(self):
+        """Test support for filename patterns in configuration files."""
+        with TemporaryDirectory(prefix='rotate-backups-', suffix='-test-suite') as root:
+            for subdirectory in 'laptop', 'vps':
+                os.makedirs(os.path.join(root, subdirectory))
+            config_file = os.path.join(root, 'rotate-backups.ini')
+            parser = configparser.RawConfigParser()
+            pattern = os.path.join(root, '*')
+            parser.add_section(pattern)
+            parser.set(pattern, 'daily', '7')
+            parser.set(pattern, 'weekly', '4')
+            parser.set(pattern, 'monthly', 'always')
+            with open(config_file, 'w') as handle:
+                parser.write(handle)
+            default_scheme = dict(monthly='always')
+            program = RotateBackups(
+                config_file=config_file,
+                rotation_scheme=default_scheme,
+            )
+            program.load_config_file(os.path.join(root, 'laptop'))
+            assert program.rotation_scheme != default_scheme
 
     def create_sample_backup_set(self, root):
         """Create a sample backup set to be rotated."""
