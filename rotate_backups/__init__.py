@@ -710,14 +710,7 @@ class Location(PropertyManager):
 
 class Backup(PropertyManager):
 
-    """
-    :class:`Backup` objects represent a rotation subject.
-
-    In addition to the :attr:`pathname`, :attr:`timestamp` and :attr:`week`
-    properties :class:`Backup` objects support all of the attributes of
-    :class:`~datetime.datetime` objects by deferring attribute access for
-    unknown attributes to :attr:`timestamp`.
-    """
+    """:class:`Backup` objects represent a rotation subject."""
 
     key_properties = 'timestamp', 'pathname'
     """

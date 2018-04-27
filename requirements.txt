@@ -2,7 +2,7 @@ coloredlogs >= 5.0
 executor >= 16.0.1
 humanfriendly >= 3.4
 naturalsort >= 1.4
-property-manager >= 2.0
+property-manager >= 2.3
 python-dateutil >= 2.2
 # simpleeval version 0.9.2 introduces syntax that is incompatible with Python 2.6.
 simpleeval >= 0.8.7, < 0.9.2

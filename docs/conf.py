@@ -21,6 +21,7 @@ extensions = [
     'sphinx.ext.intersphinx',
     'sphinx.ext.viewcode',
     'humanfriendly.sphinx',
+    'property_manager.sphinx',
 ]
 
 # Configuration for the `autodoc' extension.
