@@ -1,7 +1,7 @@
 # rotate-backups: Simple command line interface for backup rotation.
 #
 # Author: Peter Odding <peter@peterodding.com>
-# Last Change: March 25, 2018
+# Last Change: April 27, 2018
 # URL: https://github.com/xolox/python-rotate-backups
 
 """
@@ -260,9 +260,8 @@ def main():
             # Rotation of all configured locations.
             location_source = 'configuration file'
             selected_locations.extend(
-                location
-                for location, rotation_scheme, options
-                in load_config_file(kw.get('config_file'))
+                location for location, rotation_scheme, options
+                in load_config_file(configuration_file=kw.get('config_file'), expand=True)
             )
         # Inform the user which location(s) will be rotated.
         if selected_locations:

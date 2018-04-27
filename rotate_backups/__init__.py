@@ -146,12 +146,14 @@ def coerce_retention_period(value):
     return value
 
 
-def load_config_file(configuration_file=None):
+def load_config_file(configuration_file=None, expand=True):
     """
     Load a configuration file with backup directories and rotation schemes.
 
     :param configuration_file: Override the pathname of the configuration file
                                to load (a string or :data:`None`).
+    :param expand: :data:`True` to expand filename patterns to their matches,
+                   :data:`False` otherwise.
     :returns: A generator of tuples with four values each:
 
               1. An execution context created using :mod:`executor.contexts`.
@@ -175,6 +177,7 @@ def load_config_file(configuration_file=None):
     above, so that sections in user-specific configuration files override
     sections by the same name in system-wide configuration files.
     """
+    expand_notice_given = False
     if configuration_file:
         loader = ConfigLoader(available_files=[configuration_file], strict=True)
     else:
@@ -195,7 +198,21 @@ def load_config_file(configuration_file=None):
                        io_scheduling_class=items.get('ionice'),
                        strict=coerce_boolean(items.get('strict', 'yes')),
                        prefer_recent=coerce_boolean(items.get('prefer-recent', 'no')))
-        yield location, rotation_scheme, options
+        # Expand filename patterns?
+        if expand and location.have_wildcards:
+            logger.verbose("Expanding filename pattern %s on %s ..", location.directory, location.context)
+            if location.is_remote and not expand_notice_given:
+                logger.notice("Expanding remote filename patterns (may be slow) ..")
+                expand_notice_given = True
+            for match in sorted(location.context.glob(location.directory)):
+                if location.context.is_directory(match):
+                    logger.verbose("Matched directory: %s", match)
+                    expanded = Location(context=location.context, directory=match)
+                    yield expanded, rotation_scheme, options
+                else:
+                    logger.verbose("Ignoring match (not a directory): %s", match)
+        else:
+            yield location, rotation_scheme, options
 
 
 def rotate_backups(directory, rotation_scheme, **options):
@@ -472,15 +489,27 @@ class RotateBackups(PropertyManager):
         :returns: The configured or given :class:`Location` object.
         """
         location = coerce_location(location)
-        for configured_location, rotation_scheme, options in load_config_file(self.config_file):
-            if location == configured_location:
+        for configured_location, rotation_scheme, options in load_config_file(self.config_file, expand=False):
+            if configured_location.match(location):
                 logger.verbose("Loading configuration for %s ..", location)
                 if rotation_scheme:
                     self.rotation_scheme = rotation_scheme
                 for name, value in options.items():
                     if value:
                         setattr(self, name, value)
-                return configured_location
+                # Create a new Location object based on the directory of the
+                # given location and the execution context of the configured
+                # location, because:
+                #
+                # 1. The directory of the configured location may be a filename
+                #    pattern whereas we are interested in the expanded name.
+                #
+                # 2. The execution context of the given location may lack some
+                #    details of the configured location.
+                return Location(
+                    context=configured_location.context,
+                    directory=location.directory,
+                )
         logger.verbose("No configuration found for %s.", location)
         return location
 
@@ -623,6 +652,11 @@ class Location(PropertyManager):
         return self.context.have_ionice
 
     @lazy_property
+    def have_wildcards(self):
+        """:data:`True` if :attr:`directory` is a filename pattern, :data:`False` otherwise."""
+        return '*' in self.directory
+
+    @lazy_property
     def mount_point(self):
         """
         The pathname of the mount point of :attr:`directory` (a string or :data:`None`).
@@ -702,6 +736,27 @@ class Location(PropertyManager):
                     The directory {location} isn't writable, most likely due
                     to permissions. Consider using the --use-sudo option.
                 """, location=self))
+
+    def match(self, location):
+        """
+        Check if the given location "matches".
+
+        :param location: The :class:`Location` object to try to match.
+        :returns: :data:`True` if the two locations are on the same system and
+                  the :attr:`directory` can be matched as a filename pattern or
+                  a literal match on the normalized pathname.
+        """
+        if self.ssh_alias != location.ssh_alias:
+            # Never match locations on other systems.
+            return False
+        elif self.have_wildcards:
+            # Match filename patterns using fnmatch().
+            return fnmatch.fnmatch(location.directory, self.directory)
+        else:
+            # Compare normalized directory pathnames.
+            self = os.path.normpath(self.directory)
+            other = os.path.normpath(location.directory)
+            return self == other
 
     def __str__(self):
         """Render a simple human readable representation of a location."""

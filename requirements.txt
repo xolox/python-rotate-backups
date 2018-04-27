@@ -1,5 +1,5 @@
-coloredlogs >= 5.0
-executor >= 16.0.1
+coloredlogs >= 5.1
+executor >= 19.2
 humanfriendly >= 3.4
 naturalsort >= 1.4
 property-manager >= 2.3
@@ -8,4 +8,4 @@ python-dateutil >= 2.2
 simpleeval >= 0.8.7, < 0.9.2
 six >= 1.9.0
 update-dotdee >= 5.0
-verboselogs >= 1.4
+verboselogs >= 1.5
