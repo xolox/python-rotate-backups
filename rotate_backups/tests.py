@@ -383,13 +383,19 @@ class RotateBackupsTestCase(TestCase):
             parser.set(pattern, 'monthly', 'always')
             with open(config_file, 'w') as handle:
                 parser.write(handle)
+            # Check that the configured rotation scheme is applied.
             default_scheme = dict(monthly='always')
-            program = RotateBackups(
-                config_file=config_file,
-                rotation_scheme=default_scheme,
-            )
+            program = RotateBackups(config_file=config_file, rotation_scheme=default_scheme)
             program.load_config_file(os.path.join(root, 'laptop'))
             assert program.rotation_scheme != default_scheme
+            # Check that the available locations are matched.
+            available_locations = [
+                location for location, rotation_scheme, options
+                in load_config_file(config_file)
+            ]
+            assert len(available_locations) == 2
+            assert any(location.directory == os.path.join(root, 'laptop') for location in available_locations)
+            assert any(location.directory == os.path.join(root, 'vps') for location in available_locations)
 
     def create_sample_backup_set(self, root):
         """Create a sample backup set to be rotated."""
