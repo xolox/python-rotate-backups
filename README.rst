@@ -211,6 +211,7 @@ intended you have no right to complain ;-).
    remote system over SSH)."
    "``-n``, ``--dry-run``","Don't make any changes, just print what would be done. This makes it easy
    to evaluate the impact of a rotation scheme without losing any backups."
+   "``-D``, ``--use-rmdir``","Use ""rmdir"" to remove the backups (useful with CephFS snapshots for example)."
    "``-v``, ``--verbose``",Increase logging verbosity (can be repeated).
    "``-q``, ``--quiet``",Decrease logging verbosity (can be repeated).
    "``-h``, ``--help``",Show this message and exit.
@@ -359,8 +360,8 @@ Supported configuration options
   - If an include or exclude list is defined in the configuration file it
     overrides the include or exclude list given on the command line.
 
-- The ``prefer-recent``, ``strict`` and ``use-sudo`` options expect a boolean
-  value (``yes``, ``no``, ``true``, ``false``, ``1`` or ``0``).
+- The ``prefer-recent``, ``strict``, ``rmdir`` and ``use-sudo`` options expect a
+  boolean value (``yes``, ``no``, ``true``, ``false``, ``1`` or ``0``).
 
 - The ``ionice`` option expects one of the I/O scheduling class names ``idle``,
   ``best-effort`` or ``realtime``.

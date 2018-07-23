@@ -154,6 +154,12 @@ Supported options:
     Don't make any changes, just print what would be done. This makes it easy
     to evaluate the impact of a rotation scheme without losing any backups.
 
+  -D, --use-rmdir
+
+    Remove backups by calling `rmdir' to directly remove the whole directory
+    instead of deleting each of the files in it. This works only with special
+    directories such as CephFS snapshot.
+
   -v, --verbose
 
     Increase logging verbosity (can be repeated).
@@ -202,10 +208,10 @@ def main():
     selected_locations = []
     # Parse the command line arguments.
     try:
-        options, arguments = getopt.getopt(sys.argv[1:], 'M:H:d:w:m:y:I:x:jpri:c:r:unvqh', [
+        options, arguments = getopt.getopt(sys.argv[1:], 'M:H:d:w:m:y:I:x:jpri:c:r:uDnvqh', [
             'minutely=', 'hourly=', 'daily=', 'weekly=', 'monthly=', 'yearly=',
             'include=', 'exclude=', 'parallel', 'prefer-recent', 'relaxed',
-            'ionice=', 'config=', 'use-sudo', 'dry-run', 'verbose', 'quiet',
+            'ionice=', 'config=', 'use-sudo', 'dry-run', 'use-rmdir', 'verbose', 'quiet',
             'help',
         ])
         for option, value in options:
@@ -241,6 +247,8 @@ def main():
             elif option in ('-n', '--dry-run'):
                 logger.info("Performing a dry run (because of %s option) ..", option)
                 kw['dry_run'] = True
+            elif option in ('-D', '--use-rmdir'):
+                kw['rmdir'] = True
             elif option in ('-v', '--verbose'):
                 coloredlogs.increase_verbosity()
             elif option in ('-q', '--quiet'):
