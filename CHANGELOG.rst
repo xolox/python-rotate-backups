@@ -11,6 +11,16 @@ to `semantic versioning`_.
 .. _Keep a Changelog: http://keepachangelog.com/
 .. _semantic versioning: http://semver.org/
 
+`Release 5.3`_ (2018-08-03)
+---------------------------
+
+- Merged pull request `#11`_ which introduces the ``--use-rmdir`` option with
+  the suggested use case of removing CephFS snapshots.
+- Replaced ``--use-rmdir`` with ``--removal-command=rmdir`` (more general).
+
+.. _Release 5.3: https://github.com/xolox/python-rotate-backups/compare/5.2...5.3
+.. _#11: https://github.com/xolox/python-rotate-backups/pull/11
+
 `Release 5.2`_ (2018-04-27)
 ---------------------------
 
