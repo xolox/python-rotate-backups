@@ -565,10 +565,13 @@ class RotateBackups(PropertyManager):
                 elif self.include_list and not any(fnmatch.fnmatch(entry, p) for p in self.include_list):
                     logger.verbose("Excluded %s (it didn't match the include list).", entry)
                 else:
-                    backups.append(Backup(
-                        pathname=os.path.join(location.directory, entry),
-                        timestamp=datetime.datetime(*(int(group, 10) for group in match.groups('0'))),
-                    ))
+                    try:
+                        backups.append(Backup(
+                            pathname=os.path.join(location.directory, entry),
+                            timestamp=datetime.datetime(*(int(group, 10) for group in match.groups('0'))),
+                        ))
+                    except ValueError as e:
+                        logger.notice("Ignoring %s due to invalid date (%s).", entry, e)
             else:
                 logger.debug("Failed to match time stamp in filename: %s", entry)
         if backups:
