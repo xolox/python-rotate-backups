@@ -1,7 +1,7 @@
 # rotate-backups: Simple command line interface for backup rotation.
 #
 # Author: Peter Odding <peter@peterodding.com>
-# Last Change: April 27, 2018
+# Last Change: August 2, 2018
 # URL: https://github.com/xolox/python-rotate-backups
 
 """
@@ -154,11 +154,16 @@ Supported options:
     Don't make any changes, just print what would be done. This makes it easy
     to evaluate the impact of a rotation scheme without losing any backups.
 
-  -D, --use-rmdir
+  -C, --removal-command=CMD
 
-    Remove backups by calling `rmdir' to directly remove the whole directory
-    instead of deleting each of the files in it. This works only with special
-    directories such as CephFS snapshot.
+    Change the command used to remove backups. The value of CMD defaults to
+    ``rm -fR``. This choice was made because it works regardless of whether
+    "backups to be rotated" are files or directories or a mixture of both.
+
+    As an example of why you might want to change this, CephFS snapshots are
+    represented as regular directory trees that can be deleted at once with a
+    single 'rmdir' command (even though according to POSIX semantics this
+    command should refuse to remove nonempty directories, but I digress).
 
   -v, --verbose
 
@@ -175,6 +180,7 @@ Supported options:
 
 # Standard library modules.
 import getopt
+import shlex
 import sys
 
 # External dependencies.
@@ -208,11 +214,11 @@ def main():
     selected_locations = []
     # Parse the command line arguments.
     try:
-        options, arguments = getopt.getopt(sys.argv[1:], 'M:H:d:w:m:y:I:x:jpri:c:r:uDnvqh', [
+        options, arguments = getopt.getopt(sys.argv[1:], 'M:H:d:w:m:y:I:x:jpri:c:r:uC:nvqh', [
             'minutely=', 'hourly=', 'daily=', 'weekly=', 'monthly=', 'yearly=',
             'include=', 'exclude=', 'parallel', 'prefer-recent', 'relaxed',
-            'ionice=', 'config=', 'use-sudo', 'dry-run', 'use-rmdir', 'verbose', 'quiet',
-            'help',
+            'ionice=', 'config=', 'use-sudo', 'dry-run', 'removal-command=',
+            'verbose', 'quiet', 'help',
         ])
         for option, value in options:
             if option in ('-M', '--minutely'):
@@ -247,8 +253,10 @@ def main():
             elif option in ('-n', '--dry-run'):
                 logger.info("Performing a dry run (because of %s option) ..", option)
                 kw['dry_run'] = True
-            elif option in ('-D', '--use-rmdir'):
-                kw['rmdir'] = True
+            elif option in ('-C', '--removal-command'):
+                removal_command = shlex.split(value)
+                logger.info("Using custom removal command: %s", removal_command)
+                kw['removal_command'] = removal_command
             elif option in ('-v', '--verbose'):
                 coloredlogs.increase_verbosity()
             elif option in ('-q', '--quiet'):

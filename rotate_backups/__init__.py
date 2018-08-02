@@ -1,7 +1,7 @@
 # rotate-backups: Simple command line interface for backup rotation.
 #
 # Author: Peter Odding <peter@peterodding.com>
-# Last Change: April 27, 2018
+# Last Change: August 2, 2018
 # URL: https://github.com/xolox/python-rotate-backups
 
 """
@@ -19,6 +19,7 @@ import fnmatch
 import numbers
 import os
 import re
+import shlex
 
 # External dependencies.
 from dateutil.relativedelta import relativedelta
@@ -197,8 +198,11 @@ def load_config_file(configuration_file=None, expand=True):
                        exclude_list=split(items.get('exclude-list', '')),
                        io_scheduling_class=items.get('ionice'),
                        strict=coerce_boolean(items.get('strict', 'yes')),
-                       prefer_recent=coerce_boolean(items.get('prefer-recent', 'no')),
-                       rmdir=items.get('use-rmdir'))
+                       prefer_recent=coerce_boolean(items.get('prefer-recent', 'no')))
+        # Don't override the value of the 'removal_command' property unless the
+        # 'removal-command' configuration file option has a value set.
+        if items.get('removal-command'):
+            options['removal_command'] = shlex.split(items['removal-command'])
         # Expand filename patterns?
         if expand and location.have_wildcards:
             logger.verbose("Expanding filename pattern %s on %s ..", location.directory, location.context)
@@ -240,11 +244,12 @@ class RotateBackups(PropertyManager):
         Initialize a :class:`RotateBackups` object.
 
         :param rotation_scheme: Used to set :attr:`rotation_scheme`.
-        :param options: Any keyword arguments are used to set the values of the
-                        properties :attr:`config_file`, :attr:`dry_run`,
-                        :attr:`rmdir`, :attr:`exclude_list`,
-                        :attr:`include_list`, :attr:`io_scheduling_class` and
-                        :attr:`strict`.
+        :param options: Any keyword arguments are used to set the values of
+                        instance properties that support assignment
+                        (:attr:`config_file`, :attr:`dry_run`,
+                        :attr:`exclude_list`, :attr:`include_list`,
+                        :attr:`io_scheduling_class`, :attr:`removal_command`
+                        and :attr:`strict`).
         """
         options.update(rotation_scheme=rotation_scheme)
         super(RotateBackups, self).__init__(**options)
@@ -268,18 +273,6 @@ class RotateBackups(PropertyManager):
         actual changes, which provides a 'preview' of the effect of the
         rotation scheme. Right now this is only useful in the command line
         interface because there's no return value.
-        """
-        return False
-
-    @mutable_property
-    def rmdir(self):
-        """
-        :data:`True` to use `rmdir` to remove the snapshots, :data:`False` to use `rm -r` (defaults to :data:`False`).
-
-        Normally the backups are removed one file at a file using the command `rm -r`.
-        Some file-systems are capable of removing a whole directory with the command `rmdir`,
-        even when the directory is not empty. For example, this is how CephFS snapshots are
-        removed.
         """
         return False
 
@@ -338,6 +331,24 @@ class RotateBackups(PropertyManager):
         like to preserve the newest backup in each time slot instead.
         """
         return False
+
+    @mutable_property
+    def removal_command(self):
+        """
+        The command used to remove backups (a list of strings).
+
+        By default the command ``rm -fR`` is used. This choice was made because
+        it works regardless of whether the user's "backups to be rotated" are
+        files or directories or a mixture of both.
+
+        .. versionadded: 5.3
+           This option was added as a generalization of the idea suggested in
+           `pull request 11`_, which made it clear to me that being able to
+           customize the removal command has its uses.
+
+        .. _pull request 11: https://github.com/xolox/python-rotate-backups/pull/11
+        """
+        return ['rm', '-fR']
 
     @required_property
     def rotation_scheme(self):
@@ -481,18 +492,16 @@ class RotateBackups(PropertyManager):
             else:
                 logger.info("Deleting %s ..", friendly_name)
                 if not self.dry_run:
-                    if not self.rmdir:
-                        command = location.context.prepare(
-                            'rm', '-Rf', backup.pathname,
-                            group_by=(location.ssh_alias, location.mount_point),
-                            ionice=self.io_scheduling_class,
-                        )
-                    else:
-                        command = location.context.prepare(
-                            'rmdir', backup.pathname,
-                            group_by=(location.ssh_alias, location.mount_point),
-                            ionice=self.io_scheduling_class,
-                        )
+                    # Copy the list with the (possibly user defined) removal command.
+                    removal_command = list(self.removal_command)
+                    # Add the pathname of the backup as the final argument.
+                    removal_command.append(backup.pathname)
+                    # Construct the command object.
+                    command = location.context.prepare(
+                        command=removal_command,
+                        group_by=(location.ssh_alias, location.mount_point),
+                        ionice=self.io_scheduling_class,
+                    )
                     rotation_commands.append(command)
                     if not prepare:
                         timer = Timer()

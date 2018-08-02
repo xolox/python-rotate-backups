@@ -1,12 +1,13 @@
 # Test suite for the `rotate-backups' Python package.
 #
 # Author: Peter Odding <peter@peterodding.com>
-# Last Change: April 27, 2018
+# Last Change: August 3, 2018
 # URL: https://github.com/xolox/python-rotate-backups
 
 """Test suite for the `rotate-backups` package."""
 
 # Standard library modules.
+import datetime
 import logging
 import os
 
@@ -368,6 +369,16 @@ class RotateBackupsTestCase(TestCase):
             assert not os.path.exists(os.path.join(root, 'backup-2016-01-10_21-15-00'))
             assert os.path.exists(os.path.join(root, 'backup-2016-01-10_21-30-00'))
             assert os.path.exists(os.path.join(root, 'backup-2016-01-10_21-45-00'))
+
+    def test_removal_command(self):
+        """Test that the removal command can be customized."""
+        with TemporaryDirectory(prefix='rotate-backups-', suffix='-test-suite') as root:
+            today = datetime.datetime.now()
+            for date in today, (today - datetime.timedelta(hours=24)):
+                os.mkdir(os.path.join(root, date.strftime('%Y-%m-%d')))
+            program = RotateBackups(removal_command=['rmdir'], rotation_scheme=dict(monthly='always'))
+            commands = program.rotate_backups(root, prepare=True)
+            assert any(cmd.command_line[0] == 'rmdir' for cmd in commands)
 
     def test_filename_patterns(self):
         """Test support for filename patterns in configuration files."""

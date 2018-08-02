@@ -211,7 +211,14 @@ intended you have no right to complain ;-).
    remote system over SSH)."
    "``-n``, ``--dry-run``","Don't make any changes, just print what would be done. This makes it easy
    to evaluate the impact of a rotation scheme without losing any backups."
-   "``-D``, ``--use-rmdir``","Use ""rmdir"" to remove the backups (useful with CephFS snapshots for example)."
+   "``-C``, ``--removal-command=CMD``","Change the command used to remove backups. The value of ``CMD`` defaults to
+   ``rm ``-f``R``. This choice was made because it works regardless of whether
+   ""backups to be rotated"" are files or directories or a mixture of both.
+   
+   As an example of why you might want to change this, CephFS snapshots are
+   represented as regular directory trees that can be deleted at once with a
+   single 'rmdir' command (even though according to POSIX semantics this
+   command should refuse to remove nonempty directories, but I digress)."
    "``-v``, ``--verbose``",Increase logging verbosity (can be repeated).
    "``-q``, ``--quiet``",Decrease logging verbosity (can be repeated).
    "``-h``, ``--help``",Show this message and exit.
@@ -360,8 +367,11 @@ Supported configuration options
   - If an include or exclude list is defined in the configuration file it
     overrides the include or exclude list given on the command line.
 
-- The ``prefer-recent``, ``strict``, ``rmdir`` and ``use-sudo`` options expect a
-  boolean value (``yes``, ``no``, ``true``, ``false``, ``1`` or ``0``).
+- The ``prefer-recent``, ``strict`` and ``use-sudo`` options expect a boolean
+  value (``yes``, ``no``, ``true``, ``false``, ``1`` or ``0``).
+
+- The ``removal-command`` option can be used to customize the command that is
+  used to remove backups.
 
 - The ``ionice`` option expects one of the I/O scheduling class names ``idle``,
   ``best-effort`` or ``realtime``.
