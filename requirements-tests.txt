@@ -1,6 +1,7 @@
-pytest >= 3.0.7, < 3.3.0 ; python_version > '2.6'
-pytest-cov >= 2.2.1
+# Python packages required to run `make test'.
 
-# pytest release 3.3 drops Python 2.6 compatibility:
-# https://docs.pytest.org/en/latest/changelog.html#pytest-3-3-0-2017-11-23
-pytest < 3.3 ; python_version < '2.7'
+# Enable Python version compatibility.
+--constraints=constraints.txt
+
+pytest >= 3.0.7
+pytest-cov >= 2.2.1

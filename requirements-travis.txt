@@ -1,4 +1,13 @@
+# Python packages required on Travis CI.
+
+# Enable Python version compatibility.
+--constraints=constraints.txt
+
+# Pull in the requirements for code style checks,
+# the test suite and installation requirements.
 --requirement=requirements-checks.txt
 --requirement=requirements-tests.txt
 --requirement=requirements.txt
+
+# Prepare to submit coverage data.
 coveralls

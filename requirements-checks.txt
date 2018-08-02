@@ -1,4 +1,8 @@
 # Python packages required to run `make check'.
+
+# Enable Python version compatibility.
+--constraints=constraints.txt
+
 flake8 >= 2.6.0
 flake8-docstrings >= 0.2.8
 pyflakes >= 1.2.3

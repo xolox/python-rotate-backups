@@ -1,7 +1,7 @@
 # Makefile for the `rotate-backups' package.
 #
 # Author: Peter Odding <peter@peterodding.com>
-# Last Change: March 25, 2018
+# Last Change: August 2, 2018
 # URL: https://github.com/xolox/python-rotate-backups
 
 PACKAGE_NAME = rotate-backups
@@ -41,7 +41,8 @@ reset:
 	$(MAKE) install
 
 check: install
-	@scripts/check-code-style.sh
+	@pip-accel install --upgrade --quiet --requirement=requirements-checks.txt
+	@flake8
 
 test: install
 	@pip-accel install --quiet --requirement=requirements-tests.txt
