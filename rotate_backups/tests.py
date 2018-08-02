@@ -13,7 +13,7 @@ import os
 
 # External dependencies.
 from executor.contexts import RemoteContext
-from humanfriendly.testing import TemporaryDirectory, TestCase, run_cli
+from humanfriendly.testing import TemporaryDirectory, TestCase, run_cli, touch
 from six.moves import configparser
 
 # The module we're testing.
@@ -139,6 +139,18 @@ class RotateBackupsTestCase(TestCase):
             # /root.
             returncode, output = run_cli(main, '-n', '/root')
             assert returncode != 0
+
+    def test_invalid_dates(self):
+        """Make sure filenames with invalid dates don't cause an exception."""
+        with TemporaryDirectory(prefix='rotate-backups-', suffix='-test-suite') as root:
+            file_with_valid_date = os.path.join(root, 'snapshot-201808030034.tar.gz')
+            file_with_invalid_date = os.path.join(root, 'snapshot-180731150101.tar.gz')
+            for filename in file_with_valid_date, file_with_invalid_date:
+                touch(filename)
+            program = RotateBackups(rotation_scheme=dict(monthly='always'))
+            backups = program.collect_backups(root)
+            assert len(backups) == 1
+            assert backups[0].pathname == file_with_valid_date
 
     def test_dry_run(self):
         """Make sure dry run doesn't remove any backups."""
