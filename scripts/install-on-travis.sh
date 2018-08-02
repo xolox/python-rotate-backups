@@ -6,6 +6,13 @@
 if [ "$TRAVIS_OS_NAME" = osx ]; then
   VIRTUAL_ENV="$HOME/virtualenv/python2.7"
   if [ ! -x "$VIRTUAL_ENV/bin/python" ]; then
+    if ! which virtualenv &>/dev/null; then
+      # Install `virtualenv' in ~/.local (doesn't require `sudo' privileges).
+      pip install --user virtualenv
+      # Make sure ~/.local/bin is in the $PATH.
+      LOCAL_BINARIES=$(python -c 'import os, site; print(os.path.join(site.USER_BASE, "bin"))')
+      export PATH="$PATH:$LOCAL_BINARIES"
+    fi
     virtualenv "$VIRTUAL_ENV"
   fi
   source "$VIRTUAL_ENV/bin/activate"
