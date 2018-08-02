@@ -197,7 +197,8 @@ def load_config_file(configuration_file=None, expand=True):
                        exclude_list=split(items.get('exclude-list', '')),
                        io_scheduling_class=items.get('ionice'),
                        strict=coerce_boolean(items.get('strict', 'yes')),
-                       prefer_recent=coerce_boolean(items.get('prefer-recent', 'no')))
+                       prefer_recent=coerce_boolean(items.get('prefer-recent', 'no')),
+                       rmdir=items.get('use-rmdir'))
         # Expand filename patterns?
         if expand and location.have_wildcards:
             logger.verbose("Expanding filename pattern %s on %s ..", location.directory, location.context)
@@ -241,8 +242,9 @@ class RotateBackups(PropertyManager):
         :param rotation_scheme: Used to set :attr:`rotation_scheme`.
         :param options: Any keyword arguments are used to set the values of the
                         properties :attr:`config_file`, :attr:`dry_run`,
-                        :attr:`exclude_list`, :attr:`include_list`,
-                        :attr:`io_scheduling_class` and :attr:`strict`.
+                        :attr:`rmdir`, :attr:`exclude_list`,
+                        :attr:`include_list`, :attr:`io_scheduling_class` and
+                        :attr:`strict`.
         """
         options.update(rotation_scheme=rotation_scheme)
         super(RotateBackups, self).__init__(**options)
@@ -266,6 +268,18 @@ class RotateBackups(PropertyManager):
         actual changes, which provides a 'preview' of the effect of the
         rotation scheme. Right now this is only useful in the command line
         interface because there's no return value.
+        """
+        return False
+
+    @mutable_property
+    def rmdir(self):
+        """
+        :data:`True` to use `rmdir` to remove the snapshots, :data:`False` to use `rm -r` (defaults to :data:`False`).
+
+        Normally the backups are removed one file at a file using the command `rm -r`.
+        Some file-systems are capable of removing a whole directory with the command `rmdir`,
+        even when the directory is not empty. For example, this is how CephFS snapshots are
+        removed.
         """
         return False
 
@@ -467,11 +481,18 @@ class RotateBackups(PropertyManager):
             else:
                 logger.info("Deleting %s ..", friendly_name)
                 if not self.dry_run:
-                    command = location.context.prepare(
-                        'rm', '-Rf', backup.pathname,
-                        group_by=(location.ssh_alias, location.mount_point),
-                        ionice=self.io_scheduling_class,
-                    )
+                    if not self.rmdir:
+                        command = location.context.prepare(
+                            'rm', '-Rf', backup.pathname,
+                            group_by=(location.ssh_alias, location.mount_point),
+                            ionice=self.io_scheduling_class,
+                        )
+                    else:
+                        command = location.context.prepare(
+                            'rmdir', backup.pathname,
+                            group_by=(location.ssh_alias, location.mount_point),
+                            ionice=self.io_scheduling_class,
+                        )
                     rotation_commands.append(command)
                     if not prepare:
                         timer = Timer()
