@@ -11,6 +11,23 @@ to `semantic versioning`_.
 .. _Keep a Changelog: http://keepachangelog.com/
 .. _semantic versioning: http://semver.org/
 
+`Release 6.0`_ (2018-08-03)
+---------------------------
+
+This is a bug fix release that changes the behavior of the program, and because
+`rotate-backups` involves the deletion of important files I'm considering this
+a significant change in behavior that deserves a major version bump...
+
+It was reported in issue `#12`_ that filenames that match the filename pattern
+but contain digits with invalid values for the year/month/day/etc fields would
+cause a ``ValueError`` exception to be raised.
+
+Starting from this release these filenames are ignored instead, although a
+warning is logged to make sure the operator understands what's going on.
+
+.. _Release 6.0: https://github.com/xolox/python-rotate-backups/compare/5.3...6.0
+.. _#12: https://github.com/xolox/python-rotate-backups/issues/12
+
 `Release 5.3`_ (2018-08-03)
 ---------------------------
 
