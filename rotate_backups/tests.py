@@ -118,6 +118,9 @@ class RotateBackupsTestCase(TestCase):
         # Test that an invalid ionice scheduling class causes an error to be reported.
         returncode, output = run_cli(main, '--ionice=unsupported-class')
         assert returncode != 0
+        # Test that a numbered ionice scheduling class does not causes an error.
+        returncode, output = run_cli(main, '--ionice=3')
+        assert returncode == 0
         # Test that an invalid rotation scheme causes an error to be reported.
         returncode, output = run_cli(main, '--hourly=not-a-number')
         assert returncode != 0
