@@ -165,6 +165,10 @@ Supported options:
     single 'rmdir' command (even though according to POSIX semantics this
     command should refuse to remove nonempty directories, but I digress).
 
+  -t, --timestamp
+
+    Expect UNIX timestamps instead of dates.
+
   -v, --verbose
 
     Increase logging verbosity (can be repeated).
@@ -214,11 +218,11 @@ def main():
     selected_locations = []
     # Parse the command line arguments.
     try:
-        options, arguments = getopt.getopt(sys.argv[1:], 'M:H:d:w:m:y:I:x:jpri:c:r:uC:nvqh', [
+        options, arguments = getopt.getopt(sys.argv[1:], 'M:H:d:w:m:y:I:x:jpri:c:r:uC:ntvqh', [
             'minutely=', 'hourly=', 'daily=', 'weekly=', 'monthly=', 'yearly=',
             'include=', 'exclude=', 'parallel', 'prefer-recent', 'relaxed',
             'ionice=', 'config=', 'use-sudo', 'dry-run', 'removal-command=',
-            'verbose', 'quiet', 'help',
+            'timestamp', 'verbose', 'quiet', 'help',
         ])
         for option, value in options:
             if option in ('-M', '--minutely'):
@@ -257,6 +261,8 @@ def main():
                 removal_command = shlex.split(value)
                 logger.info("Using custom removal command: %s", removal_command)
                 kw['removal_command'] = removal_command
+            elif option in ('-t', '--timestamp'):
+                kw['timestamp'] = True
             elif option in ('-v', '--verbose'):
                 coloredlogs.increase_verbosity()
             elif option in ('-q', '--quiet'):

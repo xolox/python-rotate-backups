@@ -140,6 +140,19 @@ class RotateBackupsTestCase(TestCase):
             returncode, output = run_cli(main, '-n', '/root')
             assert returncode != 0
 
+    def test_unix_timestamp_dates(self):
+        """Make sure unix timestamps get extracted."""
+        with TemporaryDirectory(prefix='rotate-backups-', suffix='-test-suite') as root:
+            file_with_milliseconds = os.path.join(root, 'snapshot-1548460800311.bak.tar.gz')
+            file_with_seconds = os.path.join(root, 'snapshot-1548380800.bak.tar.gz')
+            for filename in file_with_milliseconds, file_with_seconds:
+                touch(filename)
+            program = RotateBackups(rotation_scheme=dict(monthly='always'), timestamp=True)
+            backups = program.collect_backups(root)
+            assert len(backups) == 2
+            assert backups[0].pathname == file_with_seconds
+            assert backups[1].pathname == file_with_milliseconds
+
     def test_invalid_dates(self):
         """Make sure filenames with invalid dates don't cause an exception."""
         with TemporaryDirectory(prefix='rotate-backups-', suffix='-test-suite') as root:

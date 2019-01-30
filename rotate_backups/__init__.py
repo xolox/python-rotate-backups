@@ -11,6 +11,7 @@ The :mod:`rotate_backups` module contains the Python API of the
 `rotate-backups` package. The core logic of the package is contained in the
 :class:`RotateBackups` class.
 """
+from __future__ import division
 
 # Standard library modules.
 import collections
@@ -117,6 +118,50 @@ def coerce_location(value, **options):
             directory=parse_path(directory),
         )
     return value
+
+
+def extract_datetime_from_timestamp(entry):
+    """
+    Extract a timestamp from a given file- or directory-name assuming UNIX timestamps.
+
+    :param entry: A string representing the path to examine
+    :returns: A :class:`~datetime.datetime` extracted from the given entry.
+    """
+    timestamp = None
+    match = re.search(r"\d+", entry)
+    if match:
+        base = int(match.group())
+
+        # Try seconds- and milliseconds-precision timestamps.
+        for value in (base, base / 1000):
+            try:
+                timestamp = datetime.datetime.fromtimestamp(value)
+                break
+            except ValueError:
+                timestamp = None
+        if timestamp is None:
+            logger.notice("Ignoring %s due to invalid date (%s).", entry, match.group())
+        else:
+            logger.verbose("Extracted timestamp %r from %r", timestamp, entry)
+    return timestamp
+
+
+def extract_datetime_from_datestyle(entry):
+    """
+    Extract a timestamp from a given file- or directory-name assuming date-style.
+
+    :param entry: A string representing the path to examine
+    :returns: A :class:`~datetime.datetime` extracted from the given entry.
+    """
+    timestamp = None
+    match = TIMESTAMP_PATTERN.search(entry)
+    if match:
+        # Assume YYYY-mm-dd first
+        try:
+            timestamp = datetime.datetime(*(int(group, 10) for group in match.groups('0')))
+        except ValueError as e:
+            logger.notice("Ignoring %s due to invalid date (%s).", entry, e)
+    return timestamp
 
 
 def coerce_retention_period(value):
@@ -263,6 +308,13 @@ class RotateBackups(PropertyManager):
         :func:`load_config_file()` to give the user (operator) a chance to set
         the rotation scheme and other options via a configuration file.
         """
+
+    @mutable_property
+    def timestamp(self):
+        """
+        :data:`True` to scan for timestamp, :data:`False` to scan for date-style (defaults to :data:`False`).
+        """
+        return False
 
     @mutable_property
     def dry_run(self):
@@ -553,25 +605,27 @@ class RotateBackups(PropertyManager):
         :raises: :exc:`~exceptions.ValueError` when the given directory doesn't
                  exist or isn't readable.
         """
+        if self.timestamp:
+            extractor = extract_datetime_from_timestamp
+        else:
+            extractor = extract_datetime_from_datestyle
+
         backups = []
         location = coerce_location(location)
         logger.info("Scanning %s for backups ..", location)
         location.ensure_readable()
         for entry in natsort(location.context.list_entries(location.directory)):
-            match = TIMESTAMP_PATTERN.search(entry)
-            if match:
+            timestamp = extractor(entry)
+            if timestamp:
                 if self.exclude_list and any(fnmatch.fnmatch(entry, p) for p in self.exclude_list):
                     logger.verbose("Excluded %s (it matched the exclude list).", entry)
                 elif self.include_list and not any(fnmatch.fnmatch(entry, p) for p in self.include_list):
                     logger.verbose("Excluded %s (it didn't match the include list).", entry)
                 else:
-                    try:
-                        backups.append(Backup(
-                            pathname=os.path.join(location.directory, entry),
-                            timestamp=datetime.datetime(*(int(group, 10) for group in match.groups('0'))),
-                        ))
-                    except ValueError as e:
-                        logger.notice("Ignoring %s due to invalid date (%s).", entry, e)
+                    backups.append(Backup(
+                        pathname=os.path.join(location.directory, entry),
+                        timestamp=timestamp,
+                    ))
             else:
                 logger.debug("Failed to match time stamp in filename: %s", entry)
         if backups:
