@@ -280,6 +280,10 @@ class RotateBackups(PropertyManager):
     def do_prerun_fs_checks(self):
         """
         :data:`False` to skip pre-run checks
+
+        When :data:`True`, as is the default, the script will check if directories are writeable and readable
+        before continuing to execute. This might have side-effects on some systems and produce wrong
+        error messages, in which case you should disable the option.
         """
         return True
 
@@ -563,7 +567,7 @@ class RotateBackups(PropertyManager):
         backups = []
         location = coerce_location(location)
         logger.info("Scanning %s for backups ..", location)
-        if  self.do_prerun_fs_checks:
+        if self.do_prerun_fs_checks:
             location.ensure_readable()
         for entry in natsort(location.context.list_entries(location.directory)):
             match = TIMESTAMP_PATTERN.search(entry)

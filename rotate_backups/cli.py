@@ -224,7 +224,7 @@ def main():
             'minutely=', 'hourly=', 'daily=', 'weekly=', 'monthly=', 'yearly=',
             'include=', 'exclude=', 'parallel', 'prefer-recent', 'relaxed',
             'ionice=', 'config=', 'use-sudo', 'dry-run', 'removal-command=',
-            'verbose', 'quiet', 'help', 'patronizemenot'
+            'verbose', 'quiet', 'help', 'patronizemenot',
         ])
         for option, value in options:
             if option in ('-M', '--minutely'):
