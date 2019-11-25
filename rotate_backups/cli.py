@@ -165,6 +165,12 @@ Supported options:
     single 'rmdir' command (even though according to POSIX semantics this
     command should refuse to remove nonempty directories, but I digress).
 
+  -z, --patronizemenot
+
+    Skip all checks of existance or writeablitiy of directory or files.
+    Commands will just fail. Enables rotate-backups to work in more
+    secure setups and with e.g. apparmor, firejail or sudo restrictions
+
   -v, --verbose
 
     Increase logging verbosity (can be repeated).
@@ -214,11 +220,11 @@ def main():
     selected_locations = []
     # Parse the command line arguments.
     try:
-        options, arguments = getopt.getopt(sys.argv[1:], 'M:H:d:w:m:y:I:x:jpri:c:r:uC:nvqh', [
+        options, arguments = getopt.getopt(sys.argv[1:], 'M:H:d:w:m:y:I:x:jpri:c:r:uC:nvqhz', [
             'minutely=', 'hourly=', 'daily=', 'weekly=', 'monthly=', 'yearly=',
             'include=', 'exclude=', 'parallel', 'prefer-recent', 'relaxed',
             'ionice=', 'config=', 'use-sudo', 'dry-run', 'removal-command=',
-            'verbose', 'quiet', 'help',
+            'verbose', 'quiet', 'help', 'patronizemenot'
         ])
         for option, value in options:
             if option in ('-M', '--minutely'):
@@ -243,6 +249,8 @@ def main():
                 kw['prefer_recent'] = True
             elif option in ('-r', '--relaxed'):
                 kw['strict'] = False
+            elif option in ('-z', '--patronizemenot'):
+                kw['do_prerun_fs_checks'] = False
             elif option in ('-i', '--ionice'):
                 value = validate_ionice_class(value.lower().strip())
                 kw['io_scheduling_class'] = value

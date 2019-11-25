@@ -276,6 +276,13 @@ class RotateBackups(PropertyManager):
         """
         return False
 
+    @mutable_property
+    def do_prerun_fs_checks(self):
+        """
+        :data:`False` to skip pre-run checks
+        """
+        return True
+
     @cached_property(writable=True)
     def exclude_list(self):
         """
@@ -469,7 +476,7 @@ class RotateBackups(PropertyManager):
             logger.info("No backups found in %s.", location)
             return
         # Make sure the directory is writable.
-        if not self.dry_run:
+        if not self.dry_run and self.do_prerun_fs_checks:
             location.ensure_writable()
         most_recent_backup = sorted_backups[-1]
         # Group the backups by the rotation frequencies.
@@ -556,7 +563,8 @@ class RotateBackups(PropertyManager):
         backups = []
         location = coerce_location(location)
         logger.info("Scanning %s for backups ..", location)
-        location.ensure_readable()
+        if  self.do_prerun_fs_checks:
+            location.ensure_readable()
         for entry in natsort(location.context.list_entries(location.directory)):
             match = TIMESTAMP_PATTERN.search(entry)
             if match:
