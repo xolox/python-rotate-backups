@@ -71,8 +71,7 @@ A dictionary with rotation frequency names (strings) as keys and
 :class:`~dateutil.relativedelta.relativedelta` objects as values. This
 dictionary is generated based on the tuples in :data:`ORDERED_FREQUENCIES`.
 """
-
-TIMESTAMP_PATTERN = re.compile(r'''
+TIMESTAMP = r'''
     # Required components.
     (?P<year>\d{4} ) \D?
     (?P<month>\d{2}) \D?
@@ -83,7 +82,8 @@ TIMESTAMP_PATTERN = re.compile(r'''
         (?P<minute>\d{2}) \D?
         (?P<second>\d{2})?
     )?
-''', re.VERBOSE)
+'''
+
 """
 A compiled regular expression object used to match timestamps encoded in
 filenames.
@@ -197,6 +197,7 @@ def load_config_file(configuration_file=None, expand=True):
         options = dict(include_list=split(items.get('include-list', '')),
                        exclude_list=split(items.get('exclude-list', '')),
                        io_scheduling_class=items.get('ionice'),
+                       timestamp=items.get('timestamp'),
                        strict=coerce_boolean(items.get('strict', 'yes')),
                        prefer_recent=coerce_boolean(items.get('prefer-recent', 'no')))
         # Don't override the value of the 'removal_command' property unless the
@@ -253,6 +254,10 @@ class RotateBackups(PropertyManager):
         """
         options.update(rotation_scheme=rotation_scheme)
         super(RotateBackups, self).__init__(**options)
+
+    @cached_property(writable=True)
+    def timestamp(self):
+        return TIMESTAMP
 
     @mutable_property
     def config_file(self):
@@ -557,8 +562,10 @@ class RotateBackups(PropertyManager):
         location = coerce_location(location)
         logger.info("Scanning %s for backups ..", location)
         location.ensure_readable()
+        pattern=re.compile(self.timestamp, re.VERBOSE)
         for entry in natsort(location.context.list_entries(location.directory)):
-            match = TIMESTAMP_PATTERN.search(entry)
+#            match = TIMESTAMP_PATTERN.search(entry)
+            match = pattern.search( entry)
             if match:
                 if self.exclude_list and any(fnmatch.fnmatch(entry, p) for p in self.exclude_list):
                     logger.verbose("Excluded %s (it matched the exclude list).", entry)
@@ -566,6 +573,8 @@ class RotateBackups(PropertyManager):
                     logger.verbose("Excluded %s (it didn't match the include list).", entry)
                 else:
                     try:
+#                        for group in match.groups('0'):
+#                            print group
                         backups.append(Backup(
                             pathname=os.path.join(location.directory, entry),
                             timestamp=datetime.datetime(*(int(group, 10) for group in match.groups('0'))),

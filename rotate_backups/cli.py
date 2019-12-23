@@ -214,9 +214,9 @@ def main():
     selected_locations = []
     # Parse the command line arguments.
     try:
-        options, arguments = getopt.getopt(sys.argv[1:], 'M:H:d:w:m:y:I:x:jpri:c:r:uC:nvqh', [
+        options, arguments = getopt.getopt(sys.argv[1:], 'M:H:d:w:m:y:tI:x:jpri:c:r:uC:nvqh', [
             'minutely=', 'hourly=', 'daily=', 'weekly=', 'monthly=', 'yearly=',
-            'include=', 'exclude=', 'parallel', 'prefer-recent', 'relaxed',
+            'timestamp=', 'include=', 'exclude=', 'parallel', 'prefer-recent', 'relaxed',
             'ionice=', 'config=', 'use-sudo', 'dry-run', 'removal-command=',
             'verbose', 'quiet', 'help',
         ])
@@ -233,6 +233,8 @@ def main():
                 rotation_scheme['monthly'] = coerce_retention_period(value)
             elif option in ('-y', '--yearly'):
                 rotation_scheme['yearly'] = coerce_retention_period(value)
+            elif option in ('-t', '--timestamp'):
+                kw['timestamp'].append(value)
             elif option in ('-I', '--include'):
                 kw['include_list'].append(value)
             elif option in ('-x', '--exclude'):
