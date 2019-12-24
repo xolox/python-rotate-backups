@@ -572,8 +572,6 @@ class RotateBackups(PropertyManager):
                     logger.verbose("Excluded %s (it didn't match the include list).", entry)
                 else:
                     try:
-#                        for group in match.groups('0'):
-#                            print group
                         backups.append(Backup(
                             pathname=os.path.join(location.directory, entry),
                             timestamp=datetime.datetime(*(int(group, 10) for group in match.groups('0'))),
