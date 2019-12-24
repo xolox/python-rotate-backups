@@ -564,7 +564,6 @@ class RotateBackups(PropertyManager):
         location.ensure_readable()
         pattern=re.compile(self.timestamp, re.VERBOSE)
         for entry in natsort(location.context.list_entries(location.directory)):
-#            match = TIMESTAMP_PATTERN.search(entry)
             match = pattern.search( entry)
             if match:
                 if self.exclude_list and any(fnmatch.fnmatch(entry, p) for p in self.exclude_list):

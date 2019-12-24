@@ -214,7 +214,7 @@ def main():
     selected_locations = []
     # Parse the command line arguments.
     try:
-        options, arguments = getopt.getopt(sys.argv[1:], 'M:H:d:w:m:y:tI:x:jpri:c:r:uC:nvqh', [
+        options, arguments = getopt.getopt(sys.argv[1:], 'M:H:d:w:m:y:t:I:x:jpri:c:r:uC:nvqh', [
             'minutely=', 'hourly=', 'daily=', 'weekly=', 'monthly=', 'yearly=',
             'timestamp=', 'include=', 'exclude=', 'parallel', 'prefer-recent', 'relaxed',
             'ionice=', 'config=', 'use-sudo', 'dry-run', 'removal-command=',
