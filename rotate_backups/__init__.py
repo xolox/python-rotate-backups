@@ -1,7 +1,7 @@
 # rotate-backups: Simple command line interface for backup rotation.
 #
 # Author: Peter Odding <peter@peterodding.com>
-# Last Change: August 3, 2018
+# Last Change: February 11, 2020
 # URL: https://github.com/xolox/python-rotate-backups
 
 """
@@ -88,6 +88,9 @@ TIMESTAMP_PATTERN = re.compile(r'''
 A compiled regular expression object used to match timestamps encoded in
 filenames.
 """
+
+DEFAULT_REMOVAL_COMMAND = ['rm', '-fR']
+"""The default removal command (a list of strings)."""
 
 
 def coerce_location(value, **options):
@@ -348,7 +351,7 @@ class RotateBackups(PropertyManager):
 
         .. _pull request 11: https://github.com/xolox/python-rotate-backups/pull/11
         """
-        return ['rm', '-fR']
+        return DEFAULT_REMOVAL_COMMAND
 
     @required_property
     def rotation_scheme(self):
@@ -468,8 +471,12 @@ class RotateBackups(PropertyManager):
         if not sorted_backups:
             logger.info("No backups found in %s.", location)
             return
-        # Make sure the directory is writable.
-        if not self.dry_run:
+        # Make sure the directory is writable, but only when the default
+        # removal command is being used (because custom removal commands
+        # imply custom semantics that we shouldn't get in the way of, see
+        # https://github.com/xolox/python-rotate-backups/issues/18 for
+        # more details about one such use case).
+        if not self.dry_run and (self.removal_command == DEFAULT_REMOVAL_COMMAND):
             location.ensure_writable()
         most_recent_backup = sorted_backups[-1]
         # Group the backups by the rotation frequencies.

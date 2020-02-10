@@ -1,12 +1,13 @@
 # Test suite for the `rotate-backups' Python package.
 #
 # Author: Peter Odding <peter@peterodding.com>
-# Last Change: August 3, 2018
+# Last Change: February 11, 2020
 # URL: https://github.com/xolox/python-rotate-backups
 
 """Test suite for the `rotate-backups` package."""
 
 # Standard library modules.
+import contextlib
 import datetime
 import logging
 import os
@@ -392,6 +393,27 @@ class RotateBackupsTestCase(TestCase):
             commands = program.rotate_backups(root, prepare=True)
             assert any(cmd.command_line[0] == 'rmdir' for cmd in commands)
 
+    def test_ensure_writable(self):
+        """Test that ensure_writable() complains when the location isn't writable."""
+        with TemporaryDirectory(prefix='rotate-backups-', suffix='-test-suite') as root:
+            for date in '2019-03-05', '2019-03-06':
+                os.mkdir(os.path.join(root, date))
+            with readonly_directory(root):
+                program = RotateBackups(rotation_scheme=dict(monthly='always'))
+                self.assertRaises(ValueError, program.rotate_backups, root)
+
+    def test_ensure_writable_optional(self):
+        """Test that ensure_writable() isn't called when a custom removal command is used."""
+        with TemporaryDirectory(prefix='rotate-backups-', suffix='-test-suite') as root:
+            for date in '2019-03-05', '2019-03-06':
+                os.mkdir(os.path.join(root, date))
+            with readonly_directory(root):
+                program = RotateBackups(
+                    removal_command=['echo', 'Deleting'],
+                    rotation_scheme=dict(monthly='always'),
+                )
+                program.rotate_backups(root)
+
     def test_filename_patterns(self):
         """Test support for filename patterns in configuration files."""
         with TemporaryDirectory(prefix='rotate-backups-', suffix='-test-suite') as root:
@@ -424,3 +446,11 @@ class RotateBackupsTestCase(TestCase):
         """Create a sample backup set to be rotated."""
         for name in SAMPLE_BACKUP_SET:
             os.mkdir(os.path.join(root, name))
+
+
+@contextlib.contextmanager
+def readonly_directory(pathname):
+    """Context manager to temporarily make something read only."""
+    os.chmod(pathname, 0o555)
+    yield
+    os.chmod(pathname, 0o775)
