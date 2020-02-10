@@ -1,7 +1,4 @@
 # Python packages required to run `make test'.
 
-# Enable Python version compatibility.
---constraint=constraints.txt
-
 pytest >= 3.0.7
 pytest-cov >= 2.2.1

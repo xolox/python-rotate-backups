@@ -1,4 +1,4 @@
-# Installation requirements (see also constraints.txt).
+# Installation requirements.
 
 coloredlogs >= 5.1
 executor >= 19.2
