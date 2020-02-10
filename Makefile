@@ -1,12 +1,13 @@
 # Makefile for the `rotate-backups' package.
 #
 # Author: Peter Odding <peter@peterodding.com>
-# Last Change: August 2, 2018
+# Last Change: February 11, 2020
 # URL: https://github.com/xolox/python-rotate-backups
 
 PACKAGE_NAME = rotate-backups
 WORKON_HOME ?= $(HOME)/.virtualenvs
 VIRTUAL_ENV ?= $(WORKON_HOME)/$(PACKAGE_NAME)
+PYTHON ?= python3
 PATH := $(VIRTUAL_ENV)/bin:$(PATH)
 MAKE := $(MAKE) --no-print-directory
 SHELL = bash
@@ -29,44 +30,45 @@ default:
 
 install:
 	@test -d "$(VIRTUAL_ENV)" || mkdir -p "$(VIRTUAL_ENV)"
-	@test -x "$(VIRTUAL_ENV)/bin/python" || virtualenv --quiet "$(VIRTUAL_ENV)"
-	@test -x "$(VIRTUAL_ENV)/bin/pip-accel" || pip install --quiet pip-accel
-	@pip-accel install --quiet --requirement=requirements.txt
+	@test -x "$(VIRTUAL_ENV)/bin/python" || virtualenv --python=$(PYTHON) --quiet "$(VIRTUAL_ENV)"
+	@pip install --quiet --requirement=requirements.txt
 	@pip uninstall --yes $(PACKAGE_NAME) &>/dev/null || true
 	@pip install --quiet --no-deps --ignore-installed .
 
 reset:
-	$(MAKE) clean
-	rm -Rf "$(VIRTUAL_ENV)"
-	$(MAKE) install
+	@$(MAKE) clean
+	@rm -Rf "$(VIRTUAL_ENV)"
+	@$(MAKE) install
 
 check: install
-	@pip-accel install --upgrade --quiet --requirement=requirements-checks.txt
+	@pip install --upgrade --quiet --requirement=requirements-checks.txt
 	@flake8
 
 test: install
-	@pip-accel install --quiet --requirement=requirements-tests.txt
+	@pip install --quiet --requirement=requirements-tests.txt
 	@py.test --cov
 	@coverage html
 	@coverage report --fail-under=90 &>/dev/null
 
 tox: install
-	@pip-accel install --quiet tox && tox
+	@pip install --quiet tox
+	@tox
 
 readme: install
-	@pip-accel install --quiet cogapp && cog.py -r README.rst
+	@pip install --quiet cogapp
+	@cog.py -r README.rst
 
 docs: readme
-	@pip-accel install --quiet sphinx
+	@pip install --quiet sphinx
 	@cd docs && sphinx-build -nb html -d build/doctrees . build/html
 
 publish: install
-	git push origin && git push --tags origin
-	$(MAKE) clean
-	pip-accel install --quiet twine wheel
-	python setup.py sdist bdist_wheel
-	twine upload dist/*
-	$(MAKE) clean
+	@git push origin && git push --tags origin
+	@$(MAKE) clean
+	@pip install --quiet twine wheel
+	@python setup.py sdist bdist_wheel
+	@twine upload dist/*
+	@$(MAKE) clean
 
 clean:
 	@rm -Rf *.egg .cache .coverage .tox build dist docs/build htmlcov
