@@ -38,7 +38,7 @@ master_doc = 'index'
 
 # General information about the project.
 project = 'rotate-backups'
-copyright = '2018, Peter Odding'
+copyright = '2020, Peter Odding'
 
 # The version info for the project you're documenting, acts as replacement for
 # |version| and |release|, also used in various other places throughout the
