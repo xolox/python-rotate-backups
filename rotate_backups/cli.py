@@ -1,7 +1,7 @@
 # rotate-backups: Simple command line interface for backup rotation.
 #
 # Author: Peter Odding <peter@peterodding.com>
-# Last Change: August 2, 2018
+# Last Change: February 12, 2020
 # URL: https://github.com/xolox/python-rotate-backups
 
 """
@@ -143,17 +143,6 @@ Supported options:
     same name in system-wide configuration files. For more details refer to the
     online documentation.
 
-  -u, --use-sudo
-
-    Enable the use of `sudo' to rotate backups in directories that are not
-    readable and/or writable for the current user (or the user logged in to a
-    remote system over SSH).
-
-  -n, --dry-run
-
-    Don't make any changes, just print what would be done. This makes it easy
-    to evaluate the impact of a rotation scheme without losing any backups.
-
   -C, --removal-command=CMD
 
     Change the command used to remove backups. The value of CMD defaults to
@@ -164,6 +153,26 @@ Supported options:
     represented as regular directory trees that can be deleted at once with a
     single 'rmdir' command (even though according to POSIX semantics this
     command should refuse to remove nonempty directories, but I digress).
+
+  -u, --use-sudo
+
+    Enable the use of `sudo' to rotate backups in directories that are not
+    readable and/or writable for the current user (or the user logged in to a
+    remote system over SSH).
+
+  -f, --force
+
+    If a sanity check fails an error is reported and the program aborts. You
+    can use --force to continue with backup rotation instead. Sanity checks
+    are done to ensure that the given DIRECTORY exists, is readable and is
+    writable. If the --removal-command option is given then the last sanity
+    check (that the given location is writable) is skipped (because custom
+    removal commands imply custom semantics).
+
+  -n, --dry-run
+
+    Don't make any changes, just print what would be done. This makes it easy
+    to evaluate the impact of a rotation scheme without losing any backups.
 
   -v, --verbose
 
@@ -214,11 +223,11 @@ def main():
     selected_locations = []
     # Parse the command line arguments.
     try:
-        options, arguments = getopt.getopt(sys.argv[1:], 'M:H:d:w:m:y:I:x:jpri:c:r:uC:nvqh', [
+        options, arguments = getopt.getopt(sys.argv[1:], 'M:H:d:w:m:y:I:x:jpri:c:r:uC:fnvqh', [
             'minutely=', 'hourly=', 'daily=', 'weekly=', 'monthly=', 'yearly=',
             'include=', 'exclude=', 'parallel', 'prefer-recent', 'relaxed',
-            'ionice=', 'config=', 'use-sudo', 'dry-run', 'removal-command=',
-            'verbose', 'quiet', 'help',
+            'ionice=', 'config=', 'removal-command=', 'use-sudo', 'force',
+            'dry-run', 'verbose', 'quiet', 'help',
         ])
         for option, value in options:
             if option in ('-M', '--minutely'):
@@ -248,15 +257,17 @@ def main():
                 kw['io_scheduling_class'] = value
             elif option in ('-c', '--config'):
                 kw['config_file'] = parse_path(value)
-            elif option in ('-u', '--use-sudo'):
-                use_sudo = True
-            elif option in ('-n', '--dry-run'):
-                logger.info("Performing a dry run (because of %s option) ..", option)
-                kw['dry_run'] = True
             elif option in ('-C', '--removal-command'):
                 removal_command = shlex.split(value)
                 logger.info("Using custom removal command: %s", removal_command)
                 kw['removal_command'] = removal_command
+            elif option in ('-u', '--use-sudo'):
+                use_sudo = True
+            elif option in ('-f', '--force'):
+                kw['force'] = True
+            elif option in ('-n', '--dry-run'):
+                logger.info("Performing a dry run (because of %s option) ..", option)
+                kw['dry_run'] = True
             elif option in ('-v', '--verbose'):
                 coloredlogs.increase_verbosity()
             elif option in ('-q', '--quiet'):

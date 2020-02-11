@@ -206,11 +206,6 @@ intended you have no right to complain ;-).
    that sections in user-specific configuration files override sections by the
    same name in system-wide configuration files. For more details refer to the
    online documentation."
-   "``-u``, ``--use-sudo``","Enable the use of ""sudo"" to rotate backups in directories that are not
-   readable and/or writable for the current user (or the user logged in to a
-   remote system over SSH)."
-   "``-n``, ``--dry-run``","Don't make any changes, just print what would be done. This makes it easy
-   to evaluate the impact of a rotation scheme without losing any backups."
    "``-C``, ``--removal-command=CMD``","Change the command used to remove backups. The value of ``CMD`` defaults to
    ``rm ``-f``R``. This choice was made because it works regardless of whether
    ""backups to be rotated"" are files or directories or a mixture of both.
@@ -219,6 +214,17 @@ intended you have no right to complain ;-).
    represented as regular directory trees that can be deleted at once with a
    single 'rmdir' command (even though according to POSIX semantics this
    command should refuse to remove nonempty directories, but I digress)."
+   "``-u``, ``--use-sudo``","Enable the use of ""sudo"" to rotate backups in directories that are not
+   readable and/or writable for the current user (or the user logged in to a
+   remote system over SSH)."
+   "``-f``, ``--force``","If a sanity check fails an error is reported and the program aborts. You
+   can use ``--force`` to continue with backup rotation instead. Sanity checks
+   are done to ensure that the given DIRECTORY exists, is readable and is
+   writable. If the ``--removal-command`` option is given then the last sanity
+   check (that the given location is writable) is skipped (because custom
+   removal commands imply custom semantics)."
+   "``-n``, ``--dry-run``","Don't make any changes, just print what would be done. This makes it easy
+   to evaluate the impact of a rotation scheme without losing any backups."
    "``-v``, ``--verbose``",Increase logging verbosity (can be repeated).
    "``-q``, ``--quiet``",Decrease logging verbosity (can be repeated).
    "``-h``, ``--help``",Show this message and exit.

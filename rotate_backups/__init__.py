@@ -27,7 +27,7 @@ from executor import ExternalCommandFailed
 from executor.concurrent import CommandPool
 from executor.contexts import RemoteContext, create_context
 from humanfriendly import Timer, coerce_boolean, format_path, parse_path, pluralize
-from humanfriendly.text import compact, concatenate, split
+from humanfriendly.text import concatenate, split
 from natsort import natsort
 from property_manager import (
     PropertyManager,
@@ -294,6 +294,28 @@ class RotateBackups(PropertyManager):
         """
         return []
 
+    @mutable_property
+    def force(self):
+        """
+        :data:`True` to continue if sanity checks fail, :data:`False` to raise an exception.
+
+        Sanity checks are performed before backup rotation starts to ensure
+        that the given location exists, is readable and is writable. If
+        :attr:`removal_command` is customized then the last sanity check (that
+        the given location is writable) is skipped (because custom removal
+        commands imply custom semantics, see also `#18`_). If a sanity check
+        fails an exception is raised, but you can set :attr:`force` to
+        :data:`True` to continue with backup rotation instead (the default is
+        obviously :data:`False`).
+
+        .. seealso:: :func:`Location.ensure_exists()`,
+                     :func:`Location.ensure_readable()` and
+                     :func:`Location.ensure_writable()`
+
+        .. _#18: https://github.com/xolox/python-rotate-backups/issues/18
+        """
+        return False
+
     @cached_property(writable=True)
     def include_list(self):
         """
@@ -477,7 +499,7 @@ class RotateBackups(PropertyManager):
         # https://github.com/xolox/python-rotate-backups/issues/18 for
         # more details about one such use case).
         if not self.dry_run and (self.removal_command == DEFAULT_REMOVAL_COMMAND):
-            location.ensure_writable()
+            location.ensure_writable(self.force)
         most_recent_backup = sorted_backups[-1]
         # Group the backups by the rotation frequencies.
         backups_by_frequency = self.group_backups(sorted_backups)
@@ -563,7 +585,7 @@ class RotateBackups(PropertyManager):
         backups = []
         location = coerce_location(location)
         logger.info("Scanning %s for backups ..", location)
-        location.ensure_readable()
+        location.ensure_readable(self.force)
         for entry in natsort(location.context.list_entries(location.directory)):
             match = TIMESTAMP_PATTERN.search(entry)
             if match:
@@ -733,49 +755,105 @@ class Location(PropertyManager):
         """
         return ['ssh_alias', 'directory'] if self.is_remote else ['directory']
 
-    def ensure_exists(self):
-        """Make sure the location exists."""
-        if not self.context.is_directory(self.directory):
-            # This can also happen when we don't have permission to one of the
-            # parent directories so we'll point that out in the error message
-            # when it seems applicable (so as not to confuse users).
-            if self.context.have_superuser_privileges:
-                msg = "The directory %s doesn't exist!"
-                raise ValueError(msg % self)
-            else:
-                raise ValueError(compact("""
-                    The directory {location} isn't accessible, most likely
-                    because it doesn't exist or because of permissions. If
-                    you're sure the directory exists you can use the
-                    --use-sudo option.
-                """, location=self))
+    def ensure_exists(self, override=False):
+        """
+        Sanity check that the location exists.
 
-    def ensure_readable(self):
-        """Make sure the location exists and is readable."""
-        self.ensure_exists()
-        if not self.context.is_readable(self.directory):
-            if self.context.have_superuser_privileges:
-                msg = "The directory %s isn't readable!"
-                raise ValueError(msg % self)
-            else:
-                raise ValueError(compact("""
-                    The directory {location} isn't readable, most likely
-                    because of permissions. Consider using the --use-sudo
-                    option.
-                """, location=self))
+        :param override: :data:`True` to log a message, :data:`False` to raise
+                         an exception (when the sanity check fails).
+        :returns: :data:`True` if the sanity check succeeds,
+                  :data:`False` if it fails (and `override` is :data:`True`).
+        :raises: :exc:`~exceptions.ValueError` when the sanity
+                 check fails and `override` is :data:`False`.
 
-    def ensure_writable(self):
-        """Make sure the directory exists and is writable."""
-        self.ensure_exists()
-        if not self.context.is_writable(self.directory):
-            if self.context.have_superuser_privileges:
-                msg = "The directory %s isn't writable!"
-                raise ValueError(msg % self)
+        .. seealso:: :func:`ensure_readable()`, :func:`ensure_writable()` and :func:`add_hints()`
+        """
+        if self.context.is_directory(self.directory):
+            logger.verbose("Confirmed that location exists: %s", self)
+            return True
+        elif override:
+            logger.notice("It seems %s doesn't exist but --force was given so continuing anyway ..", self)
+            return False
+        else:
+            message = "It seems %s doesn't exist or isn't accessible due to filesystem permissions!"
+            raise ValueError(self.add_hints(message % self))
+
+    def ensure_readable(self, override=False):
+        """
+        Sanity check that the location exists and is readable.
+
+        :param override: :data:`True` to log a message, :data:`False` to raise
+                         an exception (when the sanity check fails).
+        :returns: :data:`True` if the sanity check succeeds,
+                  :data:`False` if it fails (and `override` is :data:`True`).
+        :raises: :exc:`~exceptions.ValueError` when the sanity
+                 check fails and `override` is :data:`False`.
+
+        .. seealso:: :func:`ensure_exists()`, :func:`ensure_writable()` and :func:`add_hints()`
+        """
+        # Only sanity check that the location is readable when its
+        # existence has been confirmed, to avoid multiple notices
+        # about the same underlying problem.
+        if self.ensure_exists(override):
+            if self.context.is_readable(self.directory):
+                logger.verbose("Confirmed that location is readable: %s", self)
+                return True
+            elif override:
+                logger.notice("It seems %s isn't readable but --force was given so continuing anyway ..", self)
             else:
-                raise ValueError(compact("""
-                    The directory {location} isn't writable, most likely due
-                    to permissions. Consider using the --use-sudo option.
-                """, location=self))
+                message = "It seems %s isn't readable!"
+                raise ValueError(self.add_hints(message % self))
+        return False
+
+    def ensure_writable(self, override=False):
+        """
+        Sanity check that the directory exists and is writable.
+
+        :param override: :data:`True` to log a message, :data:`False` to raise
+                         an exception (when the sanity check fails).
+        :returns: :data:`True` if the sanity check succeeds,
+                  :data:`False` if it fails (and `override` is :data:`True`).
+        :raises: :exc:`~exceptions.ValueError` when the sanity
+                 check fails and `override` is :data:`False`.
+
+        .. seealso:: :func:`ensure_exists()`, :func:`ensure_readable()` and :func:`add_hints()`
+        """
+        # Only sanity check that the location is readable when its
+        # existence has been confirmed, to avoid multiple notices
+        # about the same underlying problem.
+        if self.ensure_exists(override):
+            if self.context.is_writable(self.directory):
+                logger.verbose("Confirmed that location is writable: %s", self)
+                return True
+            elif override:
+                logger.notice("It seems %s isn't writable but --force was given so continuing anyway ..", self)
+            else:
+                message = "It seems %s isn't writable!"
+                raise ValueError(self.add_hints(message % self))
+        return False
+
+    def add_hints(self, message):
+        """
+        Provide hints about failing sanity checks.
+
+        :param message: The message to the user (a string).
+        :returns: The message including hints (a string).
+
+        When superuser privileges aren't being used a hint about the
+        ``--use-sudo`` option will be added (in case a sanity check failed
+        because we don't have permission to one of the parent directories).
+
+        In all cases a hint about the ``--force`` option is added (in case the
+        sanity checks themselves are considered the problem, which is obviously
+        up to the operator to decide).
+
+        .. seealso:: :func:`ensure_exists()`, :func:`ensure_readable()` and :func:`ensure_writable()`
+        """
+        sentences = [message]
+        if not self.context.have_superuser_privileges:
+            sentences.append("If filesystem permissions are the problem consider using the --use-sudo option.")
+        sentences.append("To continue despite this failing sanity check you can use --force.")
+        return " ".join(sentences)
 
     def match(self, location):
         """

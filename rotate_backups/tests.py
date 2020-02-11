@@ -1,7 +1,7 @@
 # Test suite for the `rotate-backups' Python package.
 #
 # Author: Peter Odding <peter@peterodding.com>
-# Last Change: February 11, 2020
+# Last Change: February 12, 2020
 # URL: https://github.com/xolox/python-rotate-backups
 
 """Test suite for the `rotate-backups` package."""
@@ -13,6 +13,7 @@ import logging
 import os
 
 # External dependencies.
+from executor import ExternalCommandFailed
 from executor.contexts import RemoteContext
 from humanfriendly.testing import TemporaryDirectory, TestCase, run_cli, touch
 from six.moves import configparser
@@ -392,6 +393,15 @@ class RotateBackupsTestCase(TestCase):
             program = RotateBackups(removal_command=['rmdir'], rotation_scheme=dict(monthly='always'))
             commands = program.rotate_backups(root, prepare=True)
             assert any(cmd.command_line[0] == 'rmdir' for cmd in commands)
+
+    def test_force(self):
+        """Test that sanity checks can be overridden."""
+        with TemporaryDirectory(prefix='rotate-backups-', suffix='-test-suite') as root:
+            for date in '2019-03-05', '2019-03-06':
+                os.mkdir(os.path.join(root, date))
+            with readonly_directory(root):
+                program = RotateBackups(force=True, rotation_scheme=dict(monthly='always'))
+                self.assertRaises(ExternalCommandFailed, program.rotate_backups, root)
 
     def test_ensure_writable(self):
         """Test that ensure_writable() complains when the location isn't writable."""
