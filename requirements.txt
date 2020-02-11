@@ -2,7 +2,7 @@
 
 coloredlogs >= 5.1
 executor >= 19.2
-humanfriendly >= 3.4
+humanfriendly >= 6.1
 naturalsort >= 1.4
 property-manager >= 2.3
 python-dateutil >= 2.2

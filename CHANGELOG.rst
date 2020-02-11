@@ -11,6 +11,32 @@ to `semantic versioning`_.
 .. _Keep a Changelog: http://keepachangelog.com/
 .. _semantic versioning: http://semver.org/
 
+`Release 7.0`_ (2020-02-12)
+---------------------------
+
+**Significant changes:**
+
+- Sanity checks are done to ensure the directory with backups exists, is
+  readable and is writable. However `#18`_ made it clear that such sanity
+  checks can misjudge the situation, which made me realize an escape hatch
+  should be provided. The new ``--force`` option makes ``rotate-backups``
+  continue even if sanity checks fail.
+
+- Skip the sanity check that the directory with backups is writable when the
+  ``--removal-command`` option is given (because custom removal commands imply
+  custom semantics, see `#18`_ for an example).
+
+**Miscellaneous changes:**
+
+- Start testing on Python 3.7 and document compatibility.
+- Dropped Python 2.6 (I don't think anyone still cares about this 😉).
+- Copied Travis CI workarounds for MacOS from :pypi:`humanfriendly`.
+- Updated ``Makefile`` to use Python 3 for local development.
+- Bumped copyright to 2020.
+
+.. _Release 7.0: https://github.com/xolox/python-rotate-backups/compare/6.0...7.0
+.. _#18: https://github.com/xolox/python-rotate-backups/issues/18
+
 `Release 6.0`_ (2018-08-03)
 ---------------------------
 
