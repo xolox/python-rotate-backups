@@ -1,7 +1,7 @@
 # Installation requirements.
 
 coloredlogs >= 5.1
-executor >= 19.2
+executor >= 21.3
 humanfriendly >= 6.1
 naturalsort >= 1.4
 property-manager >= 2.3
