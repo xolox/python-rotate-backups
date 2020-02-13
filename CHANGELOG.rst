@@ -11,6 +11,34 @@ to `semantic versioning`_.
 .. _Keep a Changelog: http://keepachangelog.com/
 .. _semantic versioning: http://semver.org/
 
+`Release 7.1`_ (2020-02-13)
+---------------------------
+
+- Make it possibly to disable system logging using ``rotate-backups
+  --syslog=false`` (fixes `#20`_).
+
+- Explicitly support numeric :man:`ionice` classes (as required by
+  :man:`busybox` and suggested in `#14`_):
+
+  - This follows up on a pull request to :pypi:`executor` (a dependency of
+    :pypi:`rotate-backups`) that was merged in 2018.
+
+  - Since that pull request was merged this new "feature" has been implicitly
+    supported by :pypi:`rotate-backups` by upgrading the installed version of
+    the :pypi:`executor` package, however this probably wasn't clear to anyone
+    who's not a Python developer 😇.
+
+  - I've now merged pull request `#14`_ which adds a test to confirm that
+    numeric :man:`ionice` classes are supported.
+
+  - I also bumped the :pypi:`executor` requirement and updated the usage
+    instructions to point out that numeric :man:`ionice` classes are now
+    supported.
+
+.. _Release 7.1: https://github.com/xolox/python-rotate-backups/compare/7.0...7.1
+.. _#20: https://github.com/xolox/python-rotate-backups/issues/20
+.. _#14: https://github.com/xolox/python-rotate-backups/pull/14
+
 `Release 7.0`_ (2020-02-12)
 ---------------------------
 
