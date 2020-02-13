@@ -1,7 +1,7 @@
 # rotate-backups: Simple command line interface for backup rotation.
 #
 # Author: Peter Odding <peter@peterodding.com>
-# Last Change: February 13, 2020
+# Last Change: February 14, 2020
 # URL: https://github.com/xolox/python-rotate-backups
 
 """
@@ -26,7 +26,7 @@ from dateutil.relativedelta import relativedelta
 from executor import ExternalCommandFailed
 from executor.concurrent import CommandPool
 from executor.contexts import RemoteContext, create_context
-from humanfriendly import Timer, coerce_boolean, format_path, parse_path, pluralize
+from humanfriendly import Timer, coerce_boolean, coerce_pattern, format_path, parse_path, pluralize
 from humanfriendly.text import concatenate, split
 from natsort import natsort
 from property_manager import (
@@ -36,6 +36,7 @@ from property_manager import (
     lazy_property,
     mutable_property,
     required_property,
+    set_property,
 )
 from simpleeval import simple_eval
 from six import string_types
@@ -48,6 +49,9 @@ __version__ = '7.1'
 # Initialize a logger for this module.
 logger = VerboseLogger(__name__)
 
+DEFAULT_REMOVAL_COMMAND = ['rm', '-fR']
+"""The default removal command (a list of strings)."""
+
 ORDERED_FREQUENCIES = (
     ('minutely', relativedelta(minutes=1)),
     ('hourly', relativedelta(hours=1)),
@@ -57,12 +61,27 @@ ORDERED_FREQUENCIES = (
     ('yearly', relativedelta(years=1)),
 )
 """
-A list of tuples with two values each:
+An iterable of tuples with two values each:
 
 - The name of a rotation frequency (a string like 'hourly', 'daily', etc.).
 - A :class:`~dateutil.relativedelta.relativedelta` object.
 
 The tuples are sorted by increasing delta (intentionally).
+"""
+
+SUPPORTED_DATE_COMPONENTS = (
+    ('year', True),
+    ('month', True),
+    ('day', True),
+    ('hour', False),
+    ('minute', False),
+    ('second', False),
+)
+"""
+An iterable of tuples with two values each:
+
+- The name of a date component (a string).
+- :data:`True` for required components, :data:`False` for optional components.
 """
 
 SUPPORTED_FREQUENCIES = dict(ORDERED_FREQUENCIES)
@@ -88,9 +107,6 @@ TIMESTAMP_PATTERN = re.compile(r'''
 A compiled regular expression object used to match timestamps encoded in
 filenames.
 """
-
-DEFAULT_REMOVAL_COMMAND = ['rm', '-fR']
-"""The default removal command (a list of strings)."""
 
 
 def coerce_location(value, **options):
@@ -197,15 +213,21 @@ def load_config_file(configuration_file=None, expand=True):
         rotation_scheme = dict((name, coerce_retention_period(items[name]))
                                for name in SUPPORTED_FREQUENCIES
                                if name in items)
-        options = dict(include_list=split(items.get('include-list', '')),
-                       exclude_list=split(items.get('exclude-list', '')),
-                       io_scheduling_class=items.get('ionice'),
-                       strict=coerce_boolean(items.get('strict', 'yes')),
-                       prefer_recent=coerce_boolean(items.get('prefer-recent', 'no')))
+        options = dict(
+            exclude_list=split(items.get('exclude-list', '')),
+            include_list=split(items.get('include-list', '')),
+            io_scheduling_class=items.get('ionice'),
+            prefer_recent=coerce_boolean(items.get('prefer-recent', 'no')),
+            strict=coerce_boolean(items.get('strict', 'yes')),
+        )
         # Don't override the value of the 'removal_command' property unless the
         # 'removal-command' configuration file option has a value set.
         if items.get('removal-command'):
             options['removal_command'] = shlex.split(items['removal-command'])
+        # Don't override the value of the 'timestamp_pattern' property unless the
+        # 'timestamp-pattern' configuration file option has a value set.
+        if items.get('timestamp-pattern'):
+            options['timestamp_pattern'] = items['timestamp-pattern']
         # Expand filename patterns?
         if expand and location.have_wildcards:
             logger.verbose("Expanding filename pattern %s on %s ..", location.directory, location.context)
@@ -425,6 +447,40 @@ class RotateBackups(PropertyManager):
         """
         return True
 
+    @mutable_property
+    def timestamp_pattern(self):
+        """
+        The pattern used to extract timestamps from filenames (defaults to :data:`TIMESTAMP_PATTERN`).
+
+        The value of this property is a compiled regular expression object.
+        Callers can provide their own compiled regular expression which
+        makes it possible to customize the compilation flags (see the
+        :func:`re.compile()` documentation for details).
+
+        The regular expression pattern is expected to be a Python compatible
+        regular expression that contains the named capture groups 'year',
+        'month', 'day', 'hour', 'minute' and 'second'.
+
+        String values are automatically coerced to compiled regular expressions
+        by calling :func:`~humanfriendly.coerce_pattern()`, in this case only
+        the :data:`re.VERBOSE` flag is used.
+
+        If the caller provides a custom pattern it will be validated
+        to confirm that the pattern contains named capture groups
+        corresponding to each of the required date components
+        defined by :data:`SUPPORTED_DATE_COMPONENTS`.
+        """
+        return TIMESTAMP_PATTERN
+
+    @timestamp_pattern.setter
+    def timestamp_pattern(self, value):
+        """Coerce the value of :attr:`timestamp_pattern` to a compiled regular expression."""
+        pattern = coerce_pattern(value, re.VERBOSE)
+        for component, required in SUPPORTED_DATE_COMPONENTS:
+            if component not in pattern.groupindex and required:
+                raise ValueError("Pattern is missing required capture group! (%s)" % component)
+        set_property(self, 'timestamp_pattern', pattern)
+
     def rotate_concurrent(self, *locations, **kw):
         """
         Rotate the backups in the given locations concurrently.
@@ -587,7 +643,7 @@ class RotateBackups(PropertyManager):
         logger.info("Scanning %s for backups ..", location)
         location.ensure_readable(self.force)
         for entry in natsort(location.context.list_entries(location.directory)):
-            match = TIMESTAMP_PATTERN.search(entry)
+            match = self.timestamp_pattern.search(entry)
             if match:
                 if self.exclude_list and any(fnmatch.fnmatch(entry, p) for p in self.exclude_list):
                     logger.verbose("Excluded %s (it matched the exclude list).", entry)
@@ -597,7 +653,7 @@ class RotateBackups(PropertyManager):
                     try:
                         backups.append(Backup(
                             pathname=os.path.join(location.directory, entry),
-                            timestamp=datetime.datetime(*(int(group, 10) for group in match.groups('0'))),
+                            timestamp=self.match_to_datetime(match),
                         ))
                     except ValueError as e:
                         logger.notice("Ignoring %s due to invalid date (%s).", entry, e)
@@ -606,6 +662,30 @@ class RotateBackups(PropertyManager):
         if backups:
             logger.info("Found %i timestamped backups in %s.", len(backups), location)
         return sorted(backups)
+
+    def match_to_datetime(self, match):
+        """
+        Convert a regular expression match to a :class:`~datetime.datetime` value.
+
+        :param match: A regular expression match object.
+        :returns: A :class:`~datetime.datetime` value.
+        :raises: :exc:`exceptions.ValueError` when a required date component is
+                 not captured by the pattern, the captured value is an empty
+                 string or the captured value cannot be interpreted as a
+                 base-10 integer.
+
+        .. seealso:: :data:`SUPPORTED_DATE_COMPONENTS`
+        """
+        kw = {}
+        for component, required in SUPPORTED_DATE_COMPONENTS:
+            value = match.group(component)
+            if value:
+                kw[component] = int(value, 10)
+            elif required:
+                raise ValueError("Missing required date component! (%s)!" % component)
+            else:
+                kw[component] = 0
+        return datetime.datetime(**kw)
 
     def group_backups(self, backups):
         """

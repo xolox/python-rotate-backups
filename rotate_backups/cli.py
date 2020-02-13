@@ -1,7 +1,7 @@
 # rotate-backups: Simple command line interface for backup rotation.
 #
 # Author: Peter Odding <peter@peterodding.com>
-# Last Change: February 13, 2020
+# Last Change: February 14, 2020
 # URL: https://github.com/xolox/python-rotate-backups
 
 """
@@ -68,6 +68,13 @@ Supported options:
 
     Set the number of yearly backups to preserve during rotation. Refer to the
     usage of the -H, --hourly option for details about COUNT.
+
+  -t, --timestamp-pattern=PATTERN
+
+    Customize the regular expression pattern that is used to match and extract
+    timestamps from filenames. PATTERN is expected to be a Python compatible
+    regular expression that must define the named capture groups 'year',
+    'month' and 'day' and may define 'hour', 'minute' and 'second'.
 
   -I, --include=PATTERN
 
@@ -233,11 +240,12 @@ def main():
     selected_locations = []
     # Parse the command line arguments.
     try:
-        options, arguments = getopt.getopt(sys.argv[1:], 'M:H:d:w:m:y:I:x:jpri:c:C:uS:fnvqh', [
+        options, arguments = getopt.getopt(sys.argv[1:], 'M:H:d:w:m:y:t:I:x:jpri:c:C:uS:fnvqh', [
             'minutely=', 'hourly=', 'daily=', 'weekly=', 'monthly=', 'yearly=',
-            'include=', 'exclude=', 'parallel', 'prefer-recent', 'relaxed',
-            'ionice=', 'config=', 'removal-command=', 'use-sudo', 'syslog=',
-            'force', 'dry-run', 'verbose', 'quiet', 'help',
+            'timestamp-pattern=', 'include=', 'exclude=', 'parallel',
+            'prefer-recent', 'relaxed', 'ionice=', 'config=',
+            'removal-command=', 'use-sudo', 'syslog=', 'force',
+            'dry-run', 'verbose', 'quiet', 'help',
         ])
         for option, value in options:
             if option in ('-M', '--minutely'):
@@ -252,6 +260,8 @@ def main():
                 rotation_scheme['monthly'] = coerce_retention_period(value)
             elif option in ('-y', '--yearly'):
                 rotation_scheme['yearly'] = coerce_retention_period(value)
+            elif option in ('-t', '--timestamp-pattern'):
+                kw['timestamp_pattern'] = value
             elif option in ('-I', '--include'):
                 kw['include_list'].append(value)
             elif option in ('-x', '--exclude'):

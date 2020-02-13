@@ -153,6 +153,10 @@ intended you have no right to complain ;-).
    usage of the ``-H``, ``--hourly`` option for details about ``COUNT``."
    "``-y``, ``--yearly=COUNT``","Set the number of yearly backups to preserve during rotation. Refer to the
    usage of the ``-H``, ``--hourly`` option for details about ``COUNT``."
+   "``-t``, ``--timestamp-pattern=PATTERN``","Customize the regular expression pattern that is used to match and extract
+   timestamps from filenames. ``PATTERN`` is expected to be a Python compatible
+   regular expression that must define the named capture groups 'year',
+   'month' and 'day' and may define 'hour', 'minute' and 'second'."
    "``-I``, ``--include=PATTERN``","Only process backups that match the shell pattern given by ``PATTERN``. This
    argument can be repeated. Make sure to quote ``PATTERN`` so the shell doesn't
    expand the pattern before it's received by rotate-backups."
@@ -368,6 +372,28 @@ Supported configuration options
   ``weekly``, ``monthly`` and ``yearly`` options, these options support the
   same values as documented for the command line interface.
 
+- The ``timestamp-pattern`` option can be used to customize the regular
+  expression that's used to extract timestamps from filenames. The value is
+  expected to be a Python compatible regular expression that must contain the
+  named capture groups 'year', 'month' and 'day' and may contain the groups
+  'hour', 'minute' and 'second'. As an example here is the default regular
+  expression::
+
+    # Required components.
+    (?P<year>\d{4} ) \D?
+    (?P<month>\d{2}) \D?
+    (?P<day>\d{2}  ) \D?
+    (?:
+        # Optional components.
+        (?P<hour>\d{2}  ) \D?
+        (?P<minute>\d{2}) \D?
+        (?P<second>\d{2})?
+    )?
+
+  Note how this pattern spans multiple lines: Regular expressions are compiled
+  using the `re.VERBOSE`_ flag which means whitespace (including newlines) is
+  ignored.
+
 - The ``include-list`` and ``exclude-list`` options define a comma separated
   list of filename patterns to include or exclude, respectively:
 
@@ -384,7 +410,7 @@ Supported configuration options
   used to remove backups.
 
 - The ``ionice`` option expects one of the I/O scheduling class names ``idle``,
-  ``best-effort`` or ``realtime``.
+  ``best-effort`` or ``realtime`` (or the corresponding numbers).
 
 - The ``ssh-user`` option can be used to override the name of the remote SSH
   account that's used to connect to a remote system.
@@ -436,6 +462,7 @@ This software is licensed under the `MIT license`_.
 .. _peter@peterodding.com: peter@peterodding.com
 .. _PyPI: https://pypi.python.org/pypi/rotate-backups
 .. _Python Package Index: https://pypi.python.org/pypi/rotate-backups
+.. _re.VERBOSE: https://docs.python.org/3/library/re.html#re.VERBOSE
 .. _Read the Docs: https://rotate-backups.readthedocs.org
 .. _rsync: http://en.wikipedia.org/wiki/rsync
 .. _virtual environments: http://docs.python-guide.org/en/latest/dev/virtualenvs/

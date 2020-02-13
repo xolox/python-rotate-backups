@@ -1,7 +1,7 @@
 # Test suite for the `rotate-backups' Python package.
 #
 # Author: Peter Odding <peter@peterodding.com>
-# Last Change: February 12, 2020
+# Last Change: February 14, 2020
 # URL: https://github.com/xolox/python-rotate-backups
 
 """Test suite for the `rotate-backups` package."""
@@ -454,6 +454,37 @@ class RotateBackupsTestCase(TestCase):
             assert len(available_locations) == 2
             assert any(location.directory == os.path.join(root, 'laptop') for location in available_locations)
             assert any(location.directory == os.path.join(root, 'vps') for location in available_locations)
+
+    def test_custom_timestamp_pattern(self):
+        """Test that custom timestamp patterns are properly supported."""
+        with TemporaryDirectory(prefix='rotate-backups-', suffix='-test-suite') as root:
+            custom_backup_filename = os.path.join(root, 'My-File--2009-12-31--23-59-59.txt')
+            touch(custom_backup_filename)
+            program = RotateBackups(
+                rotation_scheme=dict(monthly='always'),
+                timestamp_pattern=r'''
+                    (?P<year>\d{4}) - (?P<month>\d{2}) - (?P<day>\d{2})
+                    --
+                    (?P<hour>\d{2}) - (?P<minute>\d{2}) - (?P<second>\d{2})
+                ''',
+            )
+            backups = program.collect_backups(root)
+            assert backups[0].pathname == custom_backup_filename
+            assert backups[0].timestamp.year == 2009
+            assert backups[0].timestamp.month == 12
+            assert backups[0].timestamp.day == 31
+            assert backups[0].timestamp.hour == 23
+            assert backups[0].timestamp.minute == 59
+            assert backups[0].timestamp.second == 59
+
+    def test_invalid_timestamp_pattern(self):
+        """Test that the capture groups in custom timestamp patterns are validated."""
+        self.assertRaises(
+            ValueError,
+            RotateBackups,
+            rotation_scheme=dict(monthly='always'),
+            timestamp_pattern=r'(?P<year>\d{4})-(?P<month>\d{2})',
+        )
 
     def create_sample_backup_set(self, root):
         """Create a sample backup set to be rotated."""

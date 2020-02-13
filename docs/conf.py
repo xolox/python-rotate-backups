@@ -74,6 +74,7 @@ intersphinx_mapping = {
     'python3': ('https://docs.python.org/3/', None),
     'dateutil': ('https://dateutil.readthedocs.io/en/latest/', None),
     'executor': ('https://executor.readthedocs.io/en/latest/', None),
+    'humanfriendly': ('https://humanfriendly.readthedocs.io/en/latest/', None),
     'propertymanager': ('https://property-manager.readthedocs.io/en/latest/', None),
     'updatedotdee': ('https://update-dotdee.readthedocs.io/en/latest/', None),
 }
