@@ -217,6 +217,9 @@ intended you have no right to complain ;-).
    "``-u``, ``--use-sudo``","Enable the use of ""sudo"" to rotate backups in directories that are not
    readable and/or writable for the current user (or the user logged in to a
    remote system over SSH)."
+   "``-S``, ``--syslog=CHOICE``","Explicitly enable or disable system logging instead of letting the program
+   figure out what to do. The values '1', 'yes', 'true' and 'on' enable system
+   logging whereas the values '0', 'no', 'false' and 'off' disable it."
    "``-f``, ``--force``","If a sanity check fails an error is reported and the program aborts. You
    can use ``--force`` to continue with backup rotation instead. Sanity checks
    are done to ensure that the given DIRECTORY exists, is readable and is

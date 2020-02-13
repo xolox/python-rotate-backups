@@ -1,7 +1,7 @@
 # rotate-backups: Simple command line interface for backup rotation.
 #
 # Author: Peter Odding <peter@peterodding.com>
-# Last Change: February 12, 2020
+# Last Change: February 13, 2020
 # URL: https://github.com/xolox/python-rotate-backups
 
 """
@@ -160,6 +160,12 @@ Supported options:
     readable and/or writable for the current user (or the user logged in to a
     remote system over SSH).
 
+  -S, --syslog=CHOICE
+
+    Explicitly enable or disable system logging instead of letting the program
+    figure out what to do. The values '1', 'yes', 'true' and 'on' enable system
+    logging whereas the values '0', 'no', 'false' and 'off' disable it.
+
   -f, --force
 
     If a sanity check fails an error is reported and the program aborts. You
@@ -194,8 +200,10 @@ import sys
 
 # External dependencies.
 import coloredlogs
+from coloredlogs import WINDOWS
+from coloredlogs.syslog import enable_system_logging
 from executor import validate_ionice_class
-from humanfriendly import parse_path, pluralize
+from humanfriendly import coerce_boolean, parse_path, pluralize
 from humanfriendly.terminal import usage
 from verboselogs import VerboseLogger
 
@@ -213,21 +221,22 @@ logger = VerboseLogger(__name__)
 
 def main():
     """Command line interface for the ``rotate-backups`` program."""
-    coloredlogs.install(syslog=True)
+    coloredlogs.install()
     # Command line option defaults.
     rotation_scheme = {}
     kw = dict(include_list=[], exclude_list=[])
     parallel = False
     use_sudo = False
+    use_syslog = (not WINDOWS)
     # Internal state.
     selected_locations = []
     # Parse the command line arguments.
     try:
-        options, arguments = getopt.getopt(sys.argv[1:], 'M:H:d:w:m:y:I:x:jpri:c:r:uC:fnvqh', [
+        options, arguments = getopt.getopt(sys.argv[1:], 'M:H:d:w:m:y:I:x:jpri:c:C:uS:fnvqh', [
             'minutely=', 'hourly=', 'daily=', 'weekly=', 'monthly=', 'yearly=',
             'include=', 'exclude=', 'parallel', 'prefer-recent', 'relaxed',
-            'ionice=', 'config=', 'removal-command=', 'use-sudo', 'force',
-            'dry-run', 'verbose', 'quiet', 'help',
+            'ionice=', 'config=', 'removal-command=', 'use-sudo', 'syslog=',
+            'force', 'dry-run', 'verbose', 'quiet', 'help',
         ])
         for option, value in options:
             if option in ('-M', '--minutely'):
@@ -263,6 +272,8 @@ def main():
                 kw['removal_command'] = removal_command
             elif option in ('-u', '--use-sudo'):
                 use_sudo = True
+            elif option in ('-S', '--syslog'):
+                use_syslog = coerce_boolean(value)
             elif option in ('-f', '--force'):
                 kw['force'] = True
             elif option in ('-n', '--dry-run'):
@@ -277,6 +288,8 @@ def main():
                 return
             else:
                 assert False, "Unhandled option! (programming error)"
+        if use_syslog:
+            enable_system_logging()
         if rotation_scheme:
             logger.verbose("Rotation scheme defined on command line: %s", rotation_scheme)
         if arguments:
