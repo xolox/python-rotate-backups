@@ -193,8 +193,9 @@ intended you have no right to complain ;-).
      use the ``-r``, ``--relaxed`` option in order to preserve more backups."
    "``-i``, ``--ionice=CLASS``","Use the ""ionice"" program to set the I/O scheduling class and priority of
    the ""rm"" invocations used to remove backups. ``CLASS`` is expected to be one of
-   the values ""idle"", ""best-effort"" or ""realtime"". Refer to the man page of
-   the ""ionice"" program for details about these values."
+   the values ""idle"" (3), ""best-effort"" (2) or ""realtime"" (1). Refer to the
+   man page of the ""ionice"" program for details about these values. The
+   numeric values are required by the 'busybox' implementation of 'ionice'."
    "``-c``, ``--config=FILENAME``","Load configuration from ``FILENAME``. If this option isn't given the following
    default locations are searched for configuration files:
    
