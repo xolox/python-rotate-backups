@@ -44,7 +44,7 @@ from update_dotdee import ConfigLoader
 from verboselogs import VerboseLogger
 
 # Semi-standard module versioning.
-__version__ = '7.1'
+__version__ = '7.2'
 
 # Initialize a logger for this module.
 logger = VerboseLogger(__name__)
@@ -458,8 +458,8 @@ class RotateBackups(PropertyManager):
         :func:`re.compile()` documentation for details).
 
         The regular expression pattern is expected to be a Python compatible
-        regular expression that contains the named capture groups 'year',
-        'month', 'day', 'hour', 'minute' and 'second'.
+        regular expression that defines the named capture groups 'year',
+        'month' and 'day' and optionally 'hour', 'minute' and 'second'.
 
         String values are automatically coerced to compiled regular expressions
         by calling :func:`~humanfriendly.coerce_pattern()`, in this case only

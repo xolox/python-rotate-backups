@@ -11,6 +11,47 @@ to `semantic versioning`_.
 .. _Keep a Changelog: http://keepachangelog.com/
 .. _semantic versioning: http://semver.org/
 
+`Release 7.2`_ (2020-02-14)
+---------------------------
+
+Merged pull request `#23`_ which makes it possible to customize the regular
+expression that's used to match timestamps in filenames using a new command
+line option ``rotate-backups --timestamp-pattern``.
+
+The pull request wasn't exactly complete (the code couldn't have run as
+written, although it showed the general idea clear enough) so I decided to
+treat `#23`_ as more of a feature suggestion. However there was no reason no to
+merge the pull request and use it as a base for my changes, hence why I decided
+to do so despite rewriting the code.
+
+Changes from the pull request:
+
+- Renamed ``timestamp`` to :attr:`~rotate_backups.RotateBackups.timestamp_pattern`
+  to make it less ambiguous.
+
+- Added validation that custom patterns provided by callers define
+  named capture groups corresponding to the required date components
+  (year, month and day).
+
+- Rewrote the mapping from capture groups to :class:`datetime.datetime`
+  arguments as follows:
+
+  - Previously positional :class:`datetime.datetime` arguments were used
+    which depended on the order of capture groups in the hard coded
+    regular expression pattern to function correctly.
+
+  - Now that users can define their own patterns, this is no longer a
+    reasonable approach. As such the code now constructs and passes a
+    dictionary of keyword arguments to :class:`datetime.datetime`.
+
+- Updated the documentation and the command line interface usage message to
+  describe the new command line option and configuration file option.
+
+- Added tests for the new behavior.
+
+.. _Release 7.2: https://github.com/xolox/python-rotate-backups/compare/7.1...7.2
+.. _#23: https://github.com/xolox/python-rotate-backups/pull/23
+
 `Release 7.1`_ (2020-02-13)
 ---------------------------
 
