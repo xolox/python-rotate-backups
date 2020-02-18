@@ -11,6 +11,29 @@ to `semantic versioning`_.
 .. _Keep a Changelog: http://keepachangelog.com/
 .. _semantic versioning: http://semver.org/
 
+`Release 8.0`_ (2020-02-18)
+---------------------------
+
+This is a bit of an awkward release:
+
+- An :exc:`~exceptions.ImportError` was reported in issue `#24`_ caused by a
+  backwards incompatible change in :pypi:`humanfriendly` concerning an
+  undocumented module level variable (shouldn't have used that).
+
+- I've now updated :pypi:`rotate-backups` to be compatible with the newest
+  release of :pypi:`humanfriendly` however in the mean time that package
+  dropped support for Python 3.4.
+
+- This explains how a simple bug fix release concerning two lines in the code
+  base triggered a major version bump because compatibility is changed.
+
+- While I was at it I set up Python 3.8 testing on Travis CI which seems to
+  work fine, so I've documented Python 3.8 as compatible. Python 3.9 seems
+  to be a whole other story, I'll get to that soon.
+
+.. _Release 8.0: https://github.com/xolox/python-rotate-backups/compare/7.2...8.0
+.. _#24: https://github.com/xolox/python-rotate-backups/issues/24
+
 `Release 7.2`_ (2020-02-14)
 ---------------------------
 

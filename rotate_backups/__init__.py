@@ -1,7 +1,7 @@
 # rotate-backups: Simple command line interface for backup rotation.
 #
 # Author: Peter Odding <peter@peterodding.com>
-# Last Change: February 14, 2020
+# Last Change: February 18, 2020
 # URL: https://github.com/xolox/python-rotate-backups
 
 """
@@ -44,7 +44,7 @@ from update_dotdee import ConfigLoader
 from verboselogs import VerboseLogger
 
 # Semi-standard module versioning.
-__version__ = '7.2'
+__version__ = '8.0'
 
 # Initialize a logger for this module.
 logger = VerboseLogger(__name__)
