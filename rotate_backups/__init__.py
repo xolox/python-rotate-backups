@@ -1,7 +1,7 @@
 # rotate-backups: Simple command line interface for backup rotation.
 #
 # Author: Peter Odding <peter@peterodding.com>
-# Last Change: February 18, 2020
+# Last Change: May 17, 2020
 # URL: https://github.com/xolox/python-rotate-backups
 
 """
@@ -26,8 +26,8 @@ from dateutil.relativedelta import relativedelta
 from executor import ExternalCommandFailed
 from executor.concurrent import CommandPool
 from executor.contexts import RemoteContext, create_context
-from humanfriendly import Timer, coerce_boolean, coerce_pattern, format_path, parse_path, pluralize
-from humanfriendly.text import concatenate, split
+from humanfriendly import Timer, coerce_boolean, coerce_pattern, format_path, parse_path
+from humanfriendly.text import concatenate, pluralize, split
 from natsort import natsort
 from property_manager import (
     PropertyManager,
