@@ -1,7 +1,7 @@
 # Test suite for the `rotate-backups' Python package.
 #
 # Author: Peter Odding <peter@peterodding.com>
-# Last Change: February 14, 2020
+# Last Change: May 17, 2020
 # URL: https://github.com/xolox/python-rotate-backups
 
 """Test suite for the `rotate-backups` package."""
@@ -485,6 +485,21 @@ class RotateBackupsTestCase(TestCase):
             rotation_scheme=dict(monthly='always'),
             timestamp_pattern=r'(?P<year>\d{4})-(?P<month>\d{2})',
         )
+
+    def test_optional_captures(self):
+        """Test that the hour/minute/second captures are truly optional."""
+        with TemporaryDirectory(prefix='rotate-backups-', suffix='-test-suite') as root:
+            touch(os.path.join(root, 'prometheus-grafana-production-09-04-2020.tar.gz'))
+            program = RotateBackups(
+                rotation_scheme=dict(monthly='always'),
+                timestamp_pattern=r'(?P<day>\d{2})-(?P<month>\d{2})-(?P<year>\d{4})',
+            )
+            location = coerce_location(root)
+            backups = program.collect_backups(location)
+            assert len(backups) == 1
+            assert backups[0].timestamp.day == 9
+            assert backups[0].timestamp.month == 4
+            assert backups[0].timestamp.year == 2020
 
     def create_sample_backup_set(self, root):
         """Create a sample backup set to be rotated."""
