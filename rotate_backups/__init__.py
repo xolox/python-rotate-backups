@@ -677,12 +677,13 @@ class RotateBackups(PropertyManager):
         .. seealso:: :data:`SUPPORTED_DATE_COMPONENTS`
         """
         kw = {}
+        captures = match.groupdict()
         for component, required in SUPPORTED_DATE_COMPONENTS:
-            value = match.group(component)
+            value = captures.get(component)
             if value:
                 kw[component] = int(value, 10)
             elif required:
-                raise ValueError("Missing required date component! (%s)!" % component)
+                raise ValueError("Missing required date component! (%s)" % component)
             else:
                 kw[component] = 0
         return datetime.datetime(**kw)
