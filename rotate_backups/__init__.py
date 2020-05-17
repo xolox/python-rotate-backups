@@ -44,7 +44,7 @@ from update_dotdee import ConfigLoader
 from verboselogs import VerboseLogger
 
 # Semi-standard module versioning.
-__version__ = '8.0'
+__version__ = '8.1'
 
 # Initialize a logger for this module.
 logger = VerboseLogger(__name__)

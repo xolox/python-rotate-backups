@@ -11,6 +11,17 @@ to `semantic versioning`_.
 .. _Keep a Changelog: http://keepachangelog.com/
 .. _semantic versioning: http://semver.org/
 
+`Release 8.1`_ (2020-05-17)
+---------------------------
+
+- Bug fix to really make the 'hour', 'minute' and 'second' capture groups in
+  user defined timestamp patterns optional (this fixes issue `#26`_).
+
+- Fixed :man:`humanfriendly` 8 deprecation warnings.
+
+.. _Release 8.1: https://github.com/xolox/python-rotate-backups/compare/8.0...8.1
+.. _#26: https://github.com/xolox/python-rotate-backups/issues/26
+
 `Release 8.0`_ (2020-02-18)
 ---------------------------
 
