@@ -387,6 +387,23 @@ class RotateBackupsTestCase(TestCase):
             assert os.path.exists(os.path.join(root, 'backup-2016-01-10_21-30-00'))
             assert os.path.exists(os.path.join(root, 'backup-2016-01-10_21-45-00'))
 
+    def test_weekly_rotation(self):
+        """Test weekly rotation."""
+        with TemporaryDirectory(prefix='rotate-backups-', suffix='-test-suite') as root:
+            os.mkdir(os.path.join(root, 'galera_backup_db4.sl.example.lab_2020-12-26_10-00'))
+            os.mkdir(os.path.join(root, 'galera_backup_db4.sl.example.lab_2021-01-02_10-00'))
+            os.mkdir(os.path.join(root, 'galera_backup_db4.sl.example.lab_2021-01-09_10-00'))
+            os.mkdir(os.path.join(root, 'galera_backup_db4.sl.example.lab_2021-01-16_10-00'))
+            os.mkdir(os.path.join(root, 'galera_backup_db4.sl.example.lab_2021-01-23_10-00'))
+            os.mkdir(os.path.join(root, 'galera_backup_db4.sl.example.lab_2021-01-30_10-00'))
+            run_cli(main, '--weekly=4', root)
+            assert os.path.exists(os.path.join(root, 'galera_backup_db4.sl.example.lab_2020-12-26_10-00')) is False
+            assert os.path.exists(os.path.join(root, 'galera_backup_db4.sl.example.lab_2021-01-02_10-00')) is False
+            assert os.path.exists(os.path.join(root, 'galera_backup_db4.sl.example.lab_2021-01-09_10-00'))
+            assert os.path.exists(os.path.join(root, 'galera_backup_db4.sl.example.lab_2021-01-16_10-00'))
+            assert os.path.exists(os.path.join(root, 'galera_backup_db4.sl.example.lab_2021-01-23_10-00'))
+            assert os.path.exists(os.path.join(root, 'galera_backup_db4.sl.example.lab_2021-01-30_10-00'))
+
     def test_removal_command(self):
         """Test that the removal command can be customized."""
         with TemporaryDirectory(prefix='rotate-backups-', suffix='-test-suite') as root:
