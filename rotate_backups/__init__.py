@@ -986,7 +986,12 @@ class Backup(PropertyManager):
     @property
     def week(self):
         """The ISO week number of :attr:`timestamp` (a number)."""
-        return self.timestamp.isocalendar()[1]
+        # for some days close to January 1, isocalendar()[1] may return the week number as 52 or 53
+        # eg: date(2022, 1, 1).isocalendar() returns (2021, 52, 6)
+        if self.year == self.timestamp.isocalendar()[0] + 1:
+            return 0
+        else:
+            return self.timestamp.isocalendar()[1]
 
     def __getattr__(self, name):
         """Defer attribute access to :attr:`timestamp`."""
