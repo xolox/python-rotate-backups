@@ -145,6 +145,21 @@ class RotateBackupsTestCase(TestCase):
             returncode, output = run_cli(main, '-n', '/root')
             assert returncode != 0
 
+    def test_timestamp_dates(self):
+        """Make sure filenames with unix timestamps don't cause an exception."""
+        with TemporaryDirectory(prefix='rotate-backups-', suffix='-test-suite') as root:
+            file_with_valid_date = os.path.join(root, 'snapshot-1612396800061.tar.gz')
+            file_with_invalid_date = os.path.join(root, 'snapshot-1807311501019237.tar.gz')
+            for filename in file_with_valid_date, file_with_invalid_date:
+                touch(filename)
+            program = RotateBackups(
+                rotation_scheme=dict(monthly='always'),
+                timestamp_pattern=r"-(?P<unixtime>\d+)\.tar\.gz"
+            )
+            backups = program.collect_backups(root)
+            assert len(backups) == 1
+            assert backups[0].pathname == file_with_valid_date
+
     def test_invalid_dates(self):
         """Make sure filenames with invalid dates don't cause an exception."""
         with TemporaryDirectory(prefix='rotate-backups-', suffix='-test-suite') as root:

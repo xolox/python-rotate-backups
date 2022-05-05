@@ -704,7 +704,7 @@ class RotateBackups(PropertyManager):
                 except ValueError:
                     timestamp = None
             if timestamp is None:
-                logger.notice("Ignoring %s due to invalid date (%s).", value, match.group())
+                raise ValueError("%r could not be extracted as unix timestamp")
             else:
                 logger.verbose("Extracted timestamp %r from %r", timestamp, value)
             return timestamp
