@@ -64,6 +64,12 @@ Features
       (?P<second>\d{2})?
    )?
 
+  If your files are for example suffixed with UNIX timestamps, you can specify a
+  regular expression exposing a named capture group ``unixtime`` like this::
+
+   # Use UNIX timestamps
+   (?P<unixtime>\d+)
+
 **All actions are logged**
   Log messages are saved to the system log (e.g. ``/var/log/syslog``) so you
   can retrace what happened when something seems to have gone wrong.
