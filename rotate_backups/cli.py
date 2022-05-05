@@ -73,8 +73,9 @@ Supported options:
 
     Customize the regular expression pattern that is used to match and extract
     timestamps from filenames. PATTERN is expected to be a Python compatible
-    regular expression that must define the named capture groups 'year',
-    'month' and 'day' and may define 'hour', 'minute' and 'second'.
+    regular expression that must define the named capture group 'unixtime' or
+    the named capture groups 'year', 'month' and 'day' and may define 'hour',
+    'minute' and 'second'.
 
   -I, --include=PATTERN
 
