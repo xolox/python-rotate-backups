@@ -448,6 +448,16 @@ class RotateBackups(PropertyManager):
         return True
 
     @mutable_property
+    def _is_unixtime(self):
+        """
+        Is the given pattern used to extract a unix timestamp?
+
+        This private property reflects if the given regex is used to exctract
+        a unix timestamp from file- or directorynames.
+        """
+        return False
+
+    @mutable_property
     def timestamp_pattern(self):
         """
         The pattern used to extract timestamps from filenames (defaults to :data:`TIMESTAMP_PATTERN`).
@@ -458,8 +468,9 @@ class RotateBackups(PropertyManager):
         :func:`re.compile()` documentation for details).
 
         The regular expression pattern is expected to be a Python compatible
-        regular expression that defines the named capture groups 'year',
-        'month' and 'day' and optionally 'hour', 'minute' and 'second'.
+        regular expression that defines the named capture group 'unixtime' or
+        the named capture groups 'year', 'month' and 'day' and optionally
+        'hour', 'minute' and 'second'.
 
         String values are automatically coerced to compiled regular expressions
         by calling :func:`~humanfriendly.coerce_pattern()`, in this case only
@@ -476,10 +487,15 @@ class RotateBackups(PropertyManager):
     def timestamp_pattern(self, value):
         """Coerce the value of :attr:`timestamp_pattern` to a compiled regular expression."""
         pattern = coerce_pattern(value, re.VERBOSE)
-        for component, required in SUPPORTED_DATE_COMPONENTS:
-            if component not in pattern.groupindex and required:
-                raise ValueError("Pattern is missing required capture group! (%s)" % component)
-        set_property(self, 'timestamp_pattern', pattern)
+        if "unixtime" in pattern.groupindex:
+            set_property(self, 'timestamp_pattern', pattern)
+            self._is_unixtime = True
+        else:
+            for component, required in SUPPORTED_DATE_COMPONENTS:
+                if component not in pattern.groupindex and required:
+                    raise ValueError("Pattern is missing required capture group! (%s)" % component)
+            set_property(self, 'timestamp_pattern', pattern)
+            self._is_unixtime = False
 
     def rotate_concurrent(self, *locations, **kw):
         """
@@ -678,15 +694,30 @@ class RotateBackups(PropertyManager):
         """
         kw = {}
         captures = match.groupdict()
-        for component, required in SUPPORTED_DATE_COMPONENTS:
-            value = captures.get(component)
-            if value:
-                kw[component] = int(value, 10)
-            elif required:
-                raise ValueError("Missing required date component! (%s)" % component)
+        if self._is_unixtime:
+            base = int(match.groupdict().get("unixtime"))
+            # Try seconds- and milliseconds-precision timestamps.
+            for value in (base, base / 1000):
+                try:
+                    timestamp = datetime.datetime.fromtimestamp(value)
+                    break
+                except ValueError:
+                    timestamp = None
+            if timestamp is None:
+                raise ValueError("%r could not be extracted as unix timestamp")
             else:
-                kw[component] = 0
-        return datetime.datetime(**kw)
+                logger.verbose("Extracted timestamp %r from %r", timestamp, value)
+            return timestamp
+        else:
+            for component, required in SUPPORTED_DATE_COMPONENTS:
+                value = captures.get(component)
+                if value:
+                    kw[component] = int(value, 10)
+                elif required:
+                    raise ValueError("Missing required date component! (%s)" % component)
+                else:
+                    kw[component] = 0
+            return datetime.datetime(**kw)
 
     def group_backups(self, backups):
         """

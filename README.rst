@@ -64,6 +64,12 @@ Features
       (?P<second>\d{2})?
    )?
 
+  If your files are for example suffixed with UNIX timestamps, you can specify a
+  regular expression exposing a named capture group ``unixtime`` like this::
+
+   # Use UNIX timestamps
+   (?P<unixtime>\d+)
+
 **All actions are logged**
   Log messages are saved to the system log (e.g. ``/var/log/syslog``) so you
   can retrace what happened when something seems to have gone wrong.
@@ -155,8 +161,9 @@ intended you have no right to complain ;-).
    usage of the ``-H``, ``--hourly`` option for details about ``COUNT``."
    "``-t``, ``--timestamp-pattern=PATTERN``","Customize the regular expression pattern that is used to match and extract
    timestamps from filenames. ``PATTERN`` is expected to be a Python compatible
-   regular expression that must define the named capture groups 'year',
-   'month' and 'day' and may define 'hour', 'minute' and 'second'."
+   regular expression that must define a named capture group 'unixtime' or the
+   named capture groups 'year', 'month' and 'day' and may define 'hour',
+   'minute' and 'second'."
    "``-I``, ``--include=PATTERN``","Only process backups that match the shell pattern given by ``PATTERN``. This
    argument can be repeated. Make sure to quote ``PATTERN`` so the shell doesn't
    expand the pattern before it's received by rotate-backups."
