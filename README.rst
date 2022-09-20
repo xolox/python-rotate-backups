@@ -137,7 +137,7 @@ intended you have no right to complain ;-).
    preserve more than one backup per hour.  Refer to the usage of the ``-H``,
    ``--hourly`` option for details about ``COUNT``."
    "``-H``, ``--hourly=COUNT``","Set the number of hourly backups to preserve during rotation:
-   
+
    - If ``COUNT`` is a number it gives the number of hourly backups to preserve,
      starting from the most recent hourly backup and counting back in time.
    - Alternatively you can provide an expression that will be evaluated to get
@@ -167,7 +167,7 @@ intended you have no right to complain ;-).
    behind this approach is that parallel rotation is most useful when the
    files to be removed are on different disks and so multiple devices can be
    utilized at the same time.
-   
+
    Because mount points are per system the ``-j``, ``--parallel`` option will also
    parallelize over backups located on multiple remote systems."
    "``-p``, ``--prefer-recent``","By default the first (oldest) backup in each time slot is preserved. If
@@ -177,22 +177,22 @@ intended you have no right to complain ;-).
    referred to as strict rotation) but the ``-r``, ``--relaxed`` option can be used
    to alter this behavior. The easiest way to explain the difference between
    strict and relaxed rotation is using an example:
-   
+
    - When using strict rotation and the number of hourly backups to preserve
      is three, only backups created in the relevant time window (the hour of
      the most recent backup and the two hours leading up to that) will match
      the hourly frequency.
-   
+
    - When using relaxed rotation the three most recent backups will all match
      the hourly frequency (and thus be preserved), regardless of the
      calculated time window.
-   
+
    If the explanation above is not clear enough, here's a simple way to decide
    whether you want to customize this behavior or not:
-   
+
    - If your backups are created at regular intervals and you never miss an
      interval then strict rotation (the default) is probably the best choice.
-   
+
    - If your backups are created at irregular intervals then you may want to
      use the ``-r``, ``--relaxed`` option in order to preserve more backups."
    "``-i``, ``--ionice=CLASS``","Use the ""ionice"" program to set the I/O scheduling class and priority of
@@ -202,11 +202,11 @@ intended you have no right to complain ;-).
    numeric values are required by the 'busybox' implementation of 'ionice'."
    "``-c``, ``--config=FILENAME``","Load configuration from ``FILENAME``. If this option isn't given the following
    default locations are searched for configuration files:
-   
+
    - /etc/rotate-backups.ini and /etc/rotate-backups.d/\*.ini
    - ~/.rotate-backups.ini and ~/.rotate-backups.d/\*.ini
    - ~/.config/rotate-backups.ini and ~/.config/rotate-backups.d/\*.ini
-   
+
    Any available configuration files are loaded in the order given above, so
    that sections in user-specific configuration files override sections by the
    same name in system-wide configuration files. For more details refer to the
@@ -214,7 +214,7 @@ intended you have no right to complain ;-).
    "``-C``, ``--removal-command=CMD``","Change the command used to remove backups. The value of ``CMD`` defaults to
    ``rm ``-f``R``. This choice was made because it works regardless of whether
    ""backups to be rotated"" are files or directories or a mixture of both.
-   
+
    As an example of why you might want to change this, CephFS snapshots are
    represented as regular directory trees that can be deleted at once with a
    single 'rmdir' command (even though according to POSIX semantics this
@@ -444,6 +444,11 @@ The latest version of `rotate-backups` is available on PyPI_ and GitHub_. The
 documentation is hosted on `Read the Docs`_ and includes a changelog_. For bug
 reports please create an issue on GitHub_. If you have questions, suggestions,
 etc. feel free to send me an e-mail at `peter@peterodding.com`_.
+
+Docker build
+-------
+
+docker build -t <repository>/python-rotate-backups:<version> .
 
 License
 -------
