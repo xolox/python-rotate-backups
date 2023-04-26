@@ -353,8 +353,41 @@ class FilenameMatcher(Matcher, PropertyManager):
         set_property(self, 'timestamp_pattern', pattern)
 
 
-class RotateBackups(PropertyManager):
+class FilestatMatch(Match):
+    """A match based on a filename statistics."""
 
+    entry: str = None
+    field: str = None
+
+    def __init__(self, entry: str, timestamp='mtime'):
+        """Make a Match from a field's stat attribute."""
+        self.entry = entry
+        self.field = f'st_{timestamp}'
+
+    def match_to_datetime(self) -> datetime.datetime:
+        """Return a datetime from the file's stat field."""
+        return datetime.datetime.fromtimestamp(
+            getattr(os.stat(self.entry), self.field)
+        )
+
+
+class FilestatMatcher(Matcher):
+    """A date-matching scheme based on file statistics."""
+
+    timestamp: str = None
+
+    def __init__(self, timestamp: str = 'mtime'):
+        """Make a Matcher based on a file's stat attribute."""
+        self.timestamp = timestamp
+
+    def search(self, location: str, entry: str) -> FilestatMatch:
+        """Return the file's stat attribute."""
+        return FilestatMatch(
+            os.path.join(location.directory, entry),
+            self.timestamp)
+
+
+class RotateBackups(PropertyManager):
     """Python API for the ``rotate-backups`` program."""
 
     def __init__(self, rotation_scheme, **options):
@@ -371,6 +404,9 @@ class RotateBackups(PropertyManager):
         """
         options.update(rotation_scheme=rotation_scheme)
         super(RotateBackups, self).__init__(**options)
+        if self.stat_timestamp:
+            logger.info("Using file mtime to determine file date")
+            self.matcher = FilestatMatcher()
 
     @mutable_property
     def config_file(self):
@@ -510,6 +546,10 @@ class RotateBackups(PropertyManager):
         No backups are preserved for rotation frequencies that are not present
         in the dictionary.
         """
+
+    @mutable_property
+    def stat_timestamp(self):
+        """Whether to use the files' mtime instead of parsing their name."""
 
     @mutable_property
     def strict(self):
