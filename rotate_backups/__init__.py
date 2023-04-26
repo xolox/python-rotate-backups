@@ -260,6 +260,99 @@ def rotate_backups(directory, rotation_scheme, **options):
     program.rotate_backups(directory)
 
 
+class Match:
+    """An interface-like class for a date match."""
+
+    def match_to_datetime(self) -> datetime.datetime:
+        """Return a datetime from the Match."""
+        pass
+
+
+class Matcher:
+    """An interface-like class for a date-matching scheme."""
+
+    def search(self, location: str, entry: str) -> Match:
+        """Process an entry in a location and return a Match."""
+        pass
+
+
+class FilenameMatch(Match):
+    """A match based on a filename pattern."""
+
+    match: re.Match = None
+
+    def __init__(self, match: re.Match):
+        """Make a Match from a regular expression match."""
+        self.match = match
+
+    def match_to_datetime(self) -> datetime.datetime:
+        """
+        Convert the regular expression match to a :class:`~datetime.datetime` value.
+
+        :returns: A :class:`~datetime.datetime` value.
+        :raises: :exc:`exceptions.ValueError` when a required date component is
+                 not captured by the pattern, the captured value is an empty
+                 string or the captured value cannot be interpreted as a
+                 base-10 integer.
+
+        .. seealso:: :data:`SUPPORTED_DATE_COMPONENTS`
+        """
+        kw = {}
+        captures = self.match.groupdict()
+        for component, required in SUPPORTED_DATE_COMPONENTS:
+            value = captures.get(component)
+            if value:
+                kw[component] = int(value, 10)
+            elif required:
+                raise ValueError("Missing required date component! (%s)" % component)
+            else:
+                kw[component] = 0
+        return datetime.datetime(**kw)
+
+
+class FilenameMatcher(Matcher, PropertyManager):
+    """A date-matching scheme based on filenames."""
+
+    def search(self, location: str, entry: str) -> FilenameMatch:
+        """Apply the pattern to the entry's name, and return a Match if found."""
+        if match := self.timestamp_pattern.search(entry):
+            return FilenameMatch(match)
+
+    @mutable_property
+    def timestamp_pattern(self):
+        """
+        The pattern used to extract timestamps from filenames (defaults to :data:`TIMESTAMP_PATTERN`).
+
+        The value of this property is a compiled regular expression object.
+        Callers can provide their own compiled regular expression which
+        makes it possible to customize the compilation flags (see the
+        :func:`re.compile()` documentation for details).
+
+        The regular expression pattern is expected to be a Python compatible
+        regular expression that defines the named capture groups 'year',
+        'month' and 'day' and optionally 'hour', 'minute' and 'second'.
+
+        String values are automatically coerced to compiled regular expressions
+        by calling :func:`~humanfriendly.coerce_pattern()`, in this case only
+        the :data:`re.VERBOSE` flag is used.
+
+        If the caller provides a custom pattern it will be validated
+        to confirm that the pattern contains named capture groups
+        corresponding to each of the required date components
+        defined by :data:`SUPPORTED_DATE_COMPONENTS`.
+        """
+        return TIMESTAMP_PATTERN
+
+    @timestamp_pattern.setter
+    def timestamp_pattern(self, value):
+        """Coerce the value of :attr:`timestamp_pattern` to a compiled regular expression."""
+        pattern = coerce_pattern(value, re.VERBOSE)
+        for component, required in SUPPORTED_DATE_COMPONENTS:
+            if component not in pattern.groupindex and required:
+                raise ValueError("Pattern is missing required capture group! (%s)" % component)
+        set_property(self, 'timestamp_pattern', pattern)
+
+
 class RotateBackups(PropertyManager):
 
     """Python API for the ``rotate-backups`` program."""
@@ -447,39 +540,31 @@ class RotateBackups(PropertyManager):
         """
         return True
 
-    @mutable_property
+    @property
     def timestamp_pattern(self):
-        """
-        The pattern used to extract timestamps from filenames (defaults to :data:`TIMESTAMP_PATTERN`).
-
-        The value of this property is a compiled regular expression object.
-        Callers can provide their own compiled regular expression which
-        makes it possible to customize the compilation flags (see the
-        :func:`re.compile()` documentation for details).
-
-        The regular expression pattern is expected to be a Python compatible
-        regular expression that defines the named capture groups 'year',
-        'month' and 'day' and optionally 'hour', 'minute' and 'second'.
-
-        String values are automatically coerced to compiled regular expressions
-        by calling :func:`~humanfriendly.coerce_pattern()`, in this case only
-        the :data:`re.VERBOSE` flag is used.
-
-        If the caller provides a custom pattern it will be validated
-        to confirm that the pattern contains named capture groups
-        corresponding to each of the required date components
-        defined by :data:`SUPPORTED_DATE_COMPONENTS`.
-        """
-        return TIMESTAMP_PATTERN
+        """Pattern to use to extract a timestamp from a filename."""
+        if not isinstance(self.matcher, FilenameMatcher):
+            raise ValueError('Current matcher is not a FilenameMatcher')
+        return self.matcher.timestamp_pattern
 
     @timestamp_pattern.setter
     def timestamp_pattern(self, value):
-        """Coerce the value of :attr:`timestamp_pattern` to a compiled regular expression."""
-        pattern = coerce_pattern(value, re.VERBOSE)
-        for component, required in SUPPORTED_DATE_COMPONENTS:
-            if component not in pattern.groupindex and required:
-                raise ValueError("Pattern is missing required capture group! (%s)" % component)
-        set_property(self, 'timestamp_pattern', pattern)
+        """Pattern to use to extract a timestamp from a filename."""
+        if not isinstance(self.matcher, FilenameMatcher):
+            raise ValueError('Current matcher is not a FilenameMatcher')
+        self.matcher.timestamp_pattern = value
+
+    @cached_property
+    def matcher(self):
+        """Matcher to use to extract a timestamp from a file."""
+        return FilenameMatcher(timestamp_pattern=TIMESTAMP_PATTERN)
+
+    @matcher.setter
+    def matcher(self, matcher):
+        """Matcher to use to extract a timestamp from a file."""
+        if not isinstance(matcher, Matcher):
+            raise ValueError(f'{matcher} is not a Matcher')
+        set_property(self, '_matcher', matcher)
 
     def rotate_concurrent(self, *locations, **kw):
         """
@@ -642,8 +727,9 @@ class RotateBackups(PropertyManager):
         location = coerce_location(location)
         logger.info("Scanning %s for backups ..", location)
         location.ensure_readable(self.force)
+
         for entry in natsort(location.context.list_entries(location.directory)):
-            match = self.timestamp_pattern.search(entry)
+            match = self.matcher.search(location, entry)
             if match:
                 if self.exclude_list and any(fnmatch.fnmatch(entry, p) for p in self.exclude_list):
                     logger.verbose("Excluded %s (it matched the exclude list).", entry)
@@ -653,7 +739,7 @@ class RotateBackups(PropertyManager):
                     try:
                         backups.append(Backup(
                             pathname=os.path.join(location.directory, entry),
-                            timestamp=self.match_to_datetime(match),
+                            timestamp=match.match_to_datetime(),
                         ))
                     except ValueError as e:
                         logger.notice("Ignoring %s due to invalid date (%s).", entry, e)
@@ -662,31 +748,6 @@ class RotateBackups(PropertyManager):
         if backups:
             logger.info("Found %i timestamped backups in %s.", len(backups), location)
         return sorted(backups)
-
-    def match_to_datetime(self, match):
-        """
-        Convert a regular expression match to a :class:`~datetime.datetime` value.
-
-        :param match: A regular expression match object.
-        :returns: A :class:`~datetime.datetime` value.
-        :raises: :exc:`exceptions.ValueError` when a required date component is
-                 not captured by the pattern, the captured value is an empty
-                 string or the captured value cannot be interpreted as a
-                 base-10 integer.
-
-        .. seealso:: :data:`SUPPORTED_DATE_COMPONENTS`
-        """
-        kw = {}
-        captures = match.groupdict()
-        for component, required in SUPPORTED_DATE_COMPONENTS:
-            value = captures.get(component)
-            if value:
-                kw[component] = int(value, 10)
-            elif required:
-                raise ValueError("Missing required date component! (%s)" % component)
-            else:
-                kw[component] = 0
-        return datetime.datetime(**kw)
 
     def group_backups(self, backups):
         """
