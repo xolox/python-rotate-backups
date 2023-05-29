@@ -604,7 +604,7 @@ class RotateBackups(PropertyManager):
         """Matcher to use to extract a timestamp from a file."""
         if not isinstance(matcher, Matcher):
             raise ValueError(f'{matcher} is not a Matcher')
-        set_property(self, '_matcher', matcher)
+        set_property(self, 'matcher', matcher)
 
     def rotate_concurrent(self, *locations, **kw):
         """
