@@ -11,6 +11,7 @@ import contextlib
 import datetime
 import logging
 import os
+import time
 
 # External dependencies.
 from executor import ExternalCommandFailed
@@ -21,6 +22,7 @@ from six.moves import configparser
 # The module we're testing.
 from rotate_backups import (
     RotateBackups,
+    FilenameMatcher,
     coerce_location,
     coerce_retention_period,
     load_config_file,
@@ -216,6 +218,55 @@ class RotateBackupsTestCase(TestCase):
             run_cli(main, '--verbose', '--config=%s' % config_file)
             backups_that_were_preserved = set(os.listdir(root))
             assert backups_that_were_preserved == expected_to_be_preserved
+
+    def test_rotate_backups_mtime(self):
+        """Test the :func:`.rotate_backups()` function."""
+        # These are the backups expected to be preserved. After each backup
+        # I've noted which rotation scheme it falls in and the number of
+        # preserved backups within that rotation scheme (counting up as we
+        # progress through the backups sorted by date).
+        expected_to_be_preserved = set([
+            '2013-10-10@20:07',  # monthly (1), yearly (1)
+            '2013-11-01@20:06',  # monthly (2)
+            '2013-12-01@20:07',  # monthly (3)
+            '2014-01-01@20:07',  # monthly (4), yearly (2)
+            '2014-02-01@20:05',  # monthly (5)
+            '2014-03-01@20:04',  # monthly (6)
+            '2014-04-01@20:03',  # monthly (7)
+            '2014-05-01@20:06',  # monthly (8)
+            '2014-06-01@20:01',  # monthly (9)
+            '2014-06-09@20:01',  # weekly (1)
+            '2014-06-16@20:02',  # weekly (2)
+            '2014-06-23@20:04',  # weekly (3)
+            '2014-06-26@20:04',  # daily (1)
+            '2014-06-27@20:02',  # daily (2)
+            '2014-06-28@20:02',  # daily (3)
+            '2014-06-29@20:01',  # daily (4)
+            '2014-06-30@20:03',  # daily (5), weekly (4)
+            '2014-07-01@20:02',  # daily (6), monthly (10)
+            '2014-07-02@20:03',  # hourly (1), daily (7)
+        ])
+        with TemporaryDirectory(prefix='rotate-backups-', suffix='-test-suite') as root:
+            # Specify the rotation scheme and options through a configuration file.
+            config_file = os.path.join(root, 'rotate-backups.ini')
+            subdir = os.path.join(root, 'mtime')
+            parser = configparser.RawConfigParser()
+            parser.add_section(subdir)
+            parser.set(subdir, 'hourly', '24')
+            parser.set(subdir, 'daily', '7')
+            parser.set(subdir, 'weekly', '4')
+            parser.set(subdir, 'monthly', '12')
+            parser.set(subdir, 'yearly', 'always')
+            parser.set(subdir, 'ionice', 'idle')
+            with open(config_file, 'w') as handle:
+                parser.write(handle)
+            self.create_sample_backup_set(root)
+            map = self.apply_mtime_and_rename(root, subdir)
+            run_cli(main, '--verbose', '--config=%s' % config_file,
+                    '--stat-timestamp')
+            backups_that_were_preserved = set(os.listdir(subdir))
+            assert backups_that_were_preserved == set([map[e]
+                                                       for e in expected_to_be_preserved])
 
     def test_rotate_concurrent(self):
         """Test the :func:`.rotate_concurrent()` function."""
@@ -505,6 +556,21 @@ class RotateBackupsTestCase(TestCase):
         """Create a sample backup set to be rotated."""
         for name in SAMPLE_BACKUP_SET:
             os.mkdir(os.path.join(root, name))
+
+    def apply_mtime_and_rename(self, root, subdir):
+        """Extract mtime from filename, update file stat, rename and return a map of old to new name"""
+        os.mkdir(subdir)
+        fm = FilenameMatcher()
+        map = {}
+        for name in os.listdir(root):
+            map[name] = name
+            if match := fm.search(root, name):
+                file = os.path.join(root, name)
+                t = time.mktime(match.match_to_datetime().timetuple())
+                os.utime(file, times=(t, t))
+                os.rename(file, os.path.join(subdir, f'{t}s'))
+                map[name] = f'{t}s'
+        return map
 
 
 @contextlib.contextmanager
