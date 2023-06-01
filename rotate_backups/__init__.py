@@ -228,6 +228,8 @@ def load_config_file(configuration_file=None, expand=True):
         # 'timestamp-pattern' configuration file option has a value set.
         if items.get('timestamp-pattern'):
             options['timestamp_pattern'] = items['timestamp-pattern']
+        if items.get('stat-timestamp'):
+            options['stat_timestamp'] = items['stat-timestamp']
         # Expand filename patterns?
         if expand and location.have_wildcards:
             logger.verbose("Expanding filename pattern %s on %s ..", location.directory, location.context)
@@ -404,9 +406,6 @@ class RotateBackups(PropertyManager):
         """
         options.update(rotation_scheme=rotation_scheme)
         super(RotateBackups, self).__init__(**options)
-        if self.stat_timestamp:
-            logger.info("Using file mtime to determine file date")
-            self.matcher = FilestatMatcher()
 
     @mutable_property
     def config_file(self):
@@ -550,6 +549,15 @@ class RotateBackups(PropertyManager):
     @mutable_property
     def stat_timestamp(self):
         """Whether to use the files' mtime instead of parsing their name."""
+        return isinstance(self.match, FilestatMatcher)
+
+    @stat_timestamp.setter
+    def stat_timestamp(self, value):
+        if value:
+            logger.info("Using file mtime to determine file date")
+            self.matcher = FilestatMatcher()
+        elif isinstance(self.match, FilestatMatcher):
+            del self.matcher
 
     @mutable_property
     def strict(self):

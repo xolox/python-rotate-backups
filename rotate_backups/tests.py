@@ -258,12 +258,12 @@ class RotateBackupsTestCase(TestCase):
             parser.set(subdir, 'monthly', '12')
             parser.set(subdir, 'yearly', 'always')
             parser.set(subdir, 'ionice', 'idle')
+            parser.set(subdir, 'stat-timestamp', 'yes')
             with open(config_file, 'w') as handle:
                 parser.write(handle)
             self.create_sample_backup_set(root)
             map = self.apply_mtime_and_rename(root, subdir)
-            run_cli(main, '--verbose', '--config=%s' % config_file,
-                    '--stat-timestamp')
+            run_cli(main, '--verbose', '--config=%s' % config_file)
             backups_that_were_preserved = set(os.listdir(subdir))
             assert backups_that_were_preserved == set([map[e]
                                                        for e in expected_to_be_preserved])
