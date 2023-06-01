@@ -168,6 +168,11 @@ Supported options:
     readable and/or writable for the current user (or the user logged in to a
     remote system over SSH).
 
+  -s, --stat-timestamp
+
+    Use mtime stat timestamps, instead of filenames, to determine the
+    date of each file.
+
   -S, --syslog=CHOICE
 
     Explicitly enable or disable system logging instead of letting the program
@@ -241,12 +246,12 @@ def main():
     selected_locations = []
     # Parse the command line arguments.
     try:
-        options, arguments = getopt.getopt(sys.argv[1:], 'M:H:d:w:m:y:t:I:x:jpri:c:C:uS:fnvqh', [
+        options, arguments = getopt.getopt(sys.argv[1:], 'M:H:d:w:m:y:t:I:x:jpri:c:C:usS:fnvqh', [
             'minutely=', 'hourly=', 'daily=', 'weekly=', 'monthly=', 'yearly=',
             'timestamp-pattern=', 'include=', 'exclude=', 'parallel',
             'prefer-recent', 'relaxed', 'ionice=', 'config=',
-            'removal-command=', 'use-sudo', 'syslog=', 'force',
-            'dry-run', 'verbose', 'quiet', 'help',
+            'removal-command=', 'use-sudo', 'stat-timestamp', 'syslog=',
+            'force', 'dry-run', 'verbose', 'quiet', 'help',
         ])
         for option, value in options:
             if option in ('-M', '--minutely'):
@@ -284,6 +289,8 @@ def main():
                 kw['removal_command'] = removal_command
             elif option in ('-u', '--use-sudo'):
                 use_sudo = True
+            elif option in ('-s', '--stat-timestamp'):
+                kw['stat_timestamp'] = True
             elif option in ('-S', '--syslog'):
                 use_syslog = coerce_boolean(value)
             elif option in ('-f', '--force'):
